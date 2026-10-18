@@ -270,7 +270,49 @@ function render() {
 }
 
 if (location.hash === "#buy") S.tab = "buy";
-fetch("shop.json", { cache: "no-cache" })
-  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then((data) => { S.shop = data; render(); })
+// ---------- loading + live updates ----------
+let lastText = null;
+async function loadShop() {
+  const r = await fetch("shop.json?t=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error(r.status);
+  const text = await r.text();
+  const data = JSON.parse(text);
+  const stamps = [Date.parse(data.updatedAt || ""), Date.parse(r.headers.get("last-modified") || "")].filter((t) => !isNaN(t));
+  S.updatedAt = stamps.length ? Math.max(...stamps) : null;
+  S.checkedAt = Date.now();
+  const changed = lastText !== null && text !== lastText;
+  lastText = text;
+  S.shop = data;
+  render();
+  return changed;
+}
+function ago(t) {
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 45) return "just now";
+  const m = Math.round(s / 60); if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60); if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const d = Math.round(h / 24); return d < 30 ? `${d} day${d === 1 ? "" : "s"} ago` : new Date(t).toLocaleDateString();
+}
+function renderUpdated() {
+  if (!S.shop) return;
+  $("updated").hidden = false;
+  $("updated-text").textContent = S.updatedAt ? `Shop updated ${ago(S.updatedAt)}` : `Checked ${ago(S.checkedAt)}`;
+  $("updated-text").title = S.updatedAt ? new Date(S.updatedAt).toLocaleString() : "";
+}
+async function refresh(manual) {
+  const btn = $("refresh");
+  if (manual) { btn.disabled = true; btn.textContent = "↻ Checking…"; }
+  try {
+    const changed = await loadShop();
+    if (changed) toast("New changes loaded");
+    else if (manual) toast("You're up to date");
+  } catch { if (manual) toast("Couldn't check for updates. Try again."); }
+  finally { btn.disabled = false; btn.textContent = "↻ Refresh"; renderUpdated(); }
+}
+$("refresh").addEventListener("click", () => refresh(true));
+setInterval(renderUpdated, 30000);
+// Check for new avatars or price changes every minute while the page is open.
+setInterval(() => { if (document.visibilityState === "visible" && !document.querySelector(".viewer-ov")) refresh(false); }, 60000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.checkedAt && Date.now() - S.checkedAt > 60000) refresh(false); });
+loadShop().then(renderUpdated)
   .catch(() => { $("view").replaceChildren(el("div", { class: "banner" }, "Couldn't load the shop. Refresh the page to try again.")); });

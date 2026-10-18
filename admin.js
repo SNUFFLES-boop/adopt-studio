@@ -56,6 +56,7 @@ async function loadShop() {
   if (!Array.isArray(S.shop.avatars)) S.shop.avatars = [];
 }
 async function saveShop(message) {
+  S.shop.updatedAt = new Date().toISOString();
   const content = b64encodeText(JSON.stringify(S.shop, null, 2) + "\n");
   try {
     const r = await gh("/contents/shop.json", { method: "PUT", body: JSON.stringify({ message, content, sha: S.sha, branch: S.branch }) });

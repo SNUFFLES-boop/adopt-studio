@@ -179,3 +179,5 @@ table.specs th { width: 40%; color: var(--muted); font-weight: 600; font-size: 1
 table.specs tr:last-child th, table.specs tr:last-child td { border-bottom: 0; }
 .details-body h4 { font: 700 14px var(--font-display); margin: 0 0 6px; }
 .muted-val { color: var(--muted); }
+.updated { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.updated .btn.small { padding: 4px 10px; font-size: 12.5px; }
