@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple launcher icon: a purple tile with two arrows (switch). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#5B3FD6" android:pathData="M24,8h60a16,16 0,0 1,16 16v60a16,16 0,0 1,-16 16h-60a16,16 0,0 1,-16 -16v-60a16,16 0,0 1,16 -16z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M30,40h38v-10l16,16 -16,16v-10h-38z" />
+    <path android:fillColor="#C9BEFF" android:pathData="M78,72h-38v10l-16,-16 16,-16v10h38z" />
+</vector>

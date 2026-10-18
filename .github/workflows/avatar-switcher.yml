@@ -1,0 +1,66 @@
+name: Build Avatar Switcher
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/avatar-switcher/**'
+      - '.github/workflows/avatar-switcher.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/avatar-switcher/pc/go.mod
+          cache: false
+
+      - name: Build Windows app
+        working-directory: tools/avatar-switcher/pc
+        run: |
+          go vet ./...
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o ../out/AvatarSwitcher.exe .
+          cp README.txt "Start with phone access.bat" ../out/
+          cd ../out && zip -q AvatarSwitcher-Windows.zip AvatarSwitcher.exe README.txt "Start with phone access.bat"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Android app
+        working-directory: tools/avatar-switcher/android
+        run: |
+          gradle --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../out/AvatarSwitcher.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AvatarSwitcher
+          path: |
+            tools/avatar-switcher/out/AvatarSwitcher-Windows.zip
+            tools/avatar-switcher/out/AvatarSwitcher.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: avatar-switcher-v1.1.${{ github.run_number }}
+          name: Avatar Switcher 1.1 (build ${{ github.run_number }})
+          make_latest: true
+          body: |
+            **Windows:** download AvatarSwitcher-Windows.zip, unzip it and run AvatarSwitcher.exe.
+            **Android:** download AvatarSwitcher.apk on your phone and open it to install (allow installing from your browser if asked).
+            The phone app connects to Avatar Switcher on your PC; turn on Phone access in its Settings first.
+          files: |
+            tools/avatar-switcher/out/AvatarSwitcher-Windows.zip
+            tools/avatar-switcher/out/AvatarSwitcher.apk

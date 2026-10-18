@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar Switcher</title>
+<style>
+  :root { --bg: #f3f2f8; --surface: #fff; --fg: #1b1930; --muted: #646080; --line: #d9d6e6; --accent: #5b3fd6; --accent-fg: #fff; --bad: #b4233c; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #121120; --surface: #1c1a2e; --fg: #ecebf6; --muted: #a29ec0; --line: #34304f; --accent: #9d86ff; --accent-fg: #14112a; --bad: #ff7d93; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg); font: 16px/1.5 "Segoe UI", system-ui, sans-serif; padding: 16px; }
+  form { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; width: min(360px, 100%); display: flex; flex-direction: column; gap: 12px; }
+  h1 { font-size: 22px; margin: 0; }
+  p { margin: 0; color: var(--muted); font-size: 14px; }
+  input { font: 600 26px ui-monospace, Consolas, monospace; letter-spacing: .3em; text-align: center; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+  button { font: inherit; font-weight: 700; padding: 11px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+  .err { color: var(--bad); font-weight: 600; min-height: 1.5em; }
+</style>
+</head>
+<body>
+<form id="f">
+  <h1>Avatar Switcher</h1>
+  <p>Enter the 6-digit PIN shown in Avatar Switcher on your PC (Settings, or the black window).</p>
+  <label for="pin" style="position:absolute;left:-9999px">PIN</label>
+  <input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" autofocus>
+  <button type="submit">Connect</button>
+  <p class="err" id="err" aria-live="polite"></p>
+</form>
+<script>
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err"); err.textContent = "";
+  const res = await fetch("/pin", { method: "POST", headers: { "Content-Type": "application/json", "X-Avatar-Switcher": "1" },
+    body: JSON.stringify({ PIN: document.getElementById("pin").value }) }).catch(() => null);
+  if (res && res.ok) location.reload();
+  else err.textContent = res && res.status === 401 ? "That PIN isn't right. Check it on your PC." : "Couldn't reach your PC. Is Avatar Switcher still open?";
+});
+</script>
+</body>
+</html>

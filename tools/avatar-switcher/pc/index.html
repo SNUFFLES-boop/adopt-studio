@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar Switcher</title>
+<style>
+  :root {
+    --bg: #f3f2f8; --surface: #fff; --sunken: #e9e7f2; --fg: #1b1930; --muted: #646080; --line: #d9d6e6;
+    --accent: #5b3fd6; --accent-fg: #fff; --ok: #18794e; --ok-soft: #d8f1e4; --warn: #9a5b00; --warn-soft: #fbeccf;
+    --bad: #b4233c; --bad-soft: #fbe1e6; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121120; --surface: #1c1a2e; --sunken: #262340; --fg: #ecebf6; --muted: #a29ec0; --line: #34304f;
+      --accent: #9d86ff; --accent-fg: #14112a; --ok: #6fd3ad; --ok-soft: #173a30; --warn: #f0b75a; --warn-soft: #3c2c12;
+      --bad: #ff7d93; --bad-soft: #45202a; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "Segoe UI", system-ui, sans-serif; padding: 24px 16px 48px; }
+  [hidden] { display: none !important; }
+  .wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 4px 0 0; font-size: 14px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input[type=text], input[type=number], input[type=url] { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; min-width: 0; }
+  #q { flex: 1 1 220px; }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .note { font-size: 13.5px; color: var(--muted); margin: 0; }
+  .status { padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+  .status.ok { background: var(--ok-soft); color: var(--ok); }
+  .status.warn { background: var(--warn-soft); color: var(--warn); }
+  .status.bad { background: var(--bad-soft); color: var(--bad); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .card.current { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok) inset; }
+  .thumb { aspect-ratio: 4 / 3; background: var(--sunken); display: grid; place-items: center; position: relative; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb .ph { font: 800 40px "Segoe UI", system-ui, sans-serif; color: var(--muted); }
+  .thumb .pic { position: absolute; bottom: 8px; right: 8px; }
+  .wearing { position: absolute; top: 8px; left: 8px; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--ok-soft); color: var(--ok); }
+  .body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+  .name { font-weight: 700; overflow-wrap: anywhere; }
+  .meta { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+  code { font: 11px ui-monospace, Consolas, monospace; color: var(--muted); overflow-wrap: anywhere; }
+  .actions { display: flex; gap: 6px; margin-top: auto; }
+  .actions .primary { flex: 1; }
+  .empty { border: 1.5px dashed var(--line); border-radius: 12px; padding: 28px 16px; text-align: center; color: var(--muted); }
+  details, .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details .bar { margin-top: 10px; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+  .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+  .settings .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .check { flex-direction: row !important; align-items: center; gap: 8px !important; }
+  .check input { width: 18px; height: 18px; }
+  .pinbox { font: 700 20px ui-monospace, Consolas, monospace; letter-spacing: .2em; }
+  .ov { position: fixed; inset: 0; background: rgb(10 8 24 / .5); display: grid; place-items: center; padding: 16px; z-index: 10; }
+  .dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(460px, 100%); display: flex; flex-direction: column; gap: 10px; }
+  .dialog h2 { margin: 0; font-size: 18px; }
+  .dialog ol { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Avatar Switcher</h1>
+      <p class="sub">Switch your VRChat avatar from here. VRChat needs OSC on: Action Menu → Options → OSC → Enabled.</p>
+    </div>
+    <a class="btn small" id="change-pc" href="avatarswitcher://connect" hidden>Change PC</a>
+  </div>
+  <div id="status" class="status" hidden aria-live="polite"></div>
+  <div id="warn" class="status warn" hidden></div>
+  <div class="bar">
+    <input id="q" type="text" placeholder="Search name, creator or tag" aria-label="Search avatars" autocomplete="off">
+    <label class="btn" for="file" id="import-btn">Import from Avatar Vault<input id="file" type="file" accept=".json,application/json" hidden></label>
+  </div>
+  <details id="add-box">
+    <summary>Add one by ID</summary>
+    <form class="bar" id="add-form">
+      <input id="add-id" type="text" placeholder="avtr_… or a vrchat.com avatar link" aria-label="Avatar ID" style="flex:2 1 260px;font-family:ui-monospace,Consolas,monospace;font-size:13px" spellcheck="false">
+      <input id="add-name" type="text" placeholder="Name" aria-label="Avatar name" style="flex:1 1 140px">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+  </details>
+  <div id="list"><p class="note">Loading…</p></div>
+  <details id="settings-box" hidden>
+    <summary>Settings: OSC and phone access</summary>
+    <form id="settings-form">
+      <div class="settings">
+        <label for="s-host">VRChat address <span class="hint">127.0.0.1 when VRChat runs on this PC</span><input id="s-host" type="text" spellcheck="false"></label>
+        <label for="s-send">OSC send port <span class="hint">VRChat listens here (default 9000)</span><input id="s-send" type="number" min="1024" max="65535"></label>
+        <label for="s-recv">OSC receive port <span class="hint">VRChat replies here (default 9001)</span><input id="s-recv" type="number" min="1024" max="65535"></label>
+        <label for="s-page">Page port <span class="hint">This page's port (default 9010)</span><input id="s-page" type="number" min="1024" max="65535"></label>
+        <label class="check" for="s-confirm"><input id="s-confirm" type="checkbox"> Confirm switches by listening for VRChat's reply</label>
+        <label class="check" for="s-phone"><input id="s-phone" type="checkbox"> Phone access (same Wi-Fi, needs the PIN)</label>
+      </div>
+      <div id="phone-info" class="panel" style="margin-top:12px" hidden>
+        <p class="note">Phone PIN</p>
+        <div class="bar"><span class="pinbox" id="pin"></span><button class="btn small" type="button" id="new-pin">New PIN</button></div>
+        <p class="note" id="lan"></p>
+      </div>
+      <p class="note" style="margin-top:10px">If you changed VRChat's OSC ports with a launch option like <code>--osc=9000:127.0.0.1:9001</code>, use the same numbers here.</p>
+      <div class="bar" style="margin-top:10px"><button class="btn primary" type="submit">Save settings</button><button class="btn" type="button" id="s-reset">Use defaults</button></div>
+    </form>
+  </details>
+</div>
+
+<div class="ov" id="pic-ov" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pic-title">
+    <h2 id="pic-title">Picture</h2>
+    <ol>
+      <li>Open the avatar on vrchat.com (signed in).</li>
+      <li>Long-press or right-click its picture and choose <b>Copy image address</b>.</li>
+      <li>Paste it below. If that doesn't work, save the picture and choose the file.</li>
+    </ol>
+    <form class="bar" id="pic-form">
+      <input id="pic-url" type="url" placeholder="https://…" aria-label="Picture link" style="flex:1 1 240px" spellcheck="false">
+      <button class="btn primary" type="submit">Use link</button>
+    </form>
+    <div class="bar">
+      <label class="btn" for="pic-file">Choose a file<input id="pic-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+      <button class="btn" type="button" id="pic-remove">Remove picture</button>
+      <button class="btn" type="button" id="pic-close" style="margin-left:auto">Close</button>
+    </div>
+    <p class="note" id="pic-msg" aria-live="polite"></p>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ID_RE = /avtr_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const onPC = ["localhost", "127.0.0.1"].includes(location.hostname);
+let state = { avatars: [], current: "", settings: {}, lan: [] };
+let busy = null, confirmDel = null, picFor = null, settingsLoaded = false;
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return n;
+}
+function show(msg, tone) { const s = $("status"); s.textContent = msg; s.className = "status " + tone; s.hidden = !msg; }
+async function api(path, body, raw) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "X-Avatar-Switcher": "1", ...(raw ? {} : { "Content-Type": "application/json" }) }, body: raw ? body : JSON.stringify(body) };
+  const res = await fetch(path, opts);
+  if (res.status === 401) { location.reload(); throw new Error("PIN needed"); }
+  if (!res.ok) throw new Error((await res.text()).trim());
+  return res.json();
+}
+async function refresh() {
+  try { state = await api("/api/state"); render(); }
+  catch (e) { if (e.message !== "PIN needed") show("Lost connection to Avatar Switcher. Is it still running on your PC?", "bad"); }
+}
+
+function render() {
+  const q = $("q").value.trim().toLowerCase();
+  const list = state.avatars.filter((a) => !q || [a.name, a.creator, a.id, ...(a.tags || [])].some((v) => (v || "").toLowerCase().includes(q)));
+  const root = $("list"); root.replaceChildren();
+  if (!state.avatars.length) {
+    root.append(el("div", { class: "empty" }, el("b", {}, "No avatars yet"), el("br"),
+      onPC ? "In Avatar Vault, tap Export backup, then use Import from Avatar Vault here. Or add one by ID." : "Add avatars on your PC, or add one by ID above."));
+  } else if (!list.length) root.append(el("p", { class: "note" }, "No avatars match your search."));
+  else root.append(el("div", { class: "grid" }, list.map(card)));
+  const w = [state.listenError, state.webError && "The page port couldn't be used, so it went back to 9010: " + state.webError].filter(Boolean).join(" ");
+  $("warn").textContent = w; $("warn").hidden = !w;
+  if (onPC) renderSettings();
+}
+function card(a) {
+  const isCur = state.current && a.id.toLowerCase() === state.current.toLowerCase();
+  const del = confirmDel === a.id;
+  return el("article", { class: "card" + (isCur ? " current" : "") },
+    el("div", { class: "thumb" },
+      a.image ? el("img", { src: "/img/" + encodeURIComponent(a.image), alt: "", loading: "lazy" }) : el("span", { class: "ph", "aria-hidden": "true" }, (a.name || "?").slice(0, 1).toUpperCase()),
+      isCur ? el("span", { class: "wearing" }, "Wearing") : null,
+      el("button", { class: "btn small pic", type: "button", onclick: () => openPic(a) }, a.image ? "Change picture" : "Add picture")),
+    el("div", { class: "body" },
+      el("div", { class: "name" }, (a.favorite ? "★ " : "") + a.name),
+      el("div", { class: "meta" }, [a.creator && "by " + a.creator, a.platform && ({ pc: "PC", quest: "Quest", both: "PC + Quest" }[a.platform] || a.platform)].filter(Boolean).join(" · ")),
+      el("code", {}, a.id),
+      el("div", { class: "actions" },
+        el("button", { class: "btn small", type: "button", "aria-label": "Remove " + a.name, onclick: () => del ? remove(a) : (confirmDel = a.id, render(), setTimeout(() => { if (confirmDel === a.id) { confirmDel = null; render(); } }, 4000)) }, del ? "Tap again" : "Remove"),
+        el("button", { class: "btn primary", type: "button", disabled: busy !== null, onclick: () => switchTo(a) }, busy === a.id ? "Switching…" : "Switch"))));
+}
+
+async function switchTo(a) {
+  busy = a.id; render(); show("Switching to " + a.name + "…", "warn");
+  try {
+    const r = await api("/api/switch", { id: a.id });
+    if (r.confirmed === true) { show("Switched to " + a.name + " ✓", "ok"); state.current = a.id; }
+    else if (r.confirmed === false) show("VRChat didn't switch to " + a.name + ". Check OSC is on in VRChat, and that you're allowed to wear this avatar.", "bad");
+    else show("Sent to VRChat. If nothing happens, check OSC is on (Action Menu → Options → OSC → Enabled).", "ok");
+  } catch { show("Couldn't send to VRChat. Is VRChat running, and is the VRChat address in Settings right?", "bad"); }
+  busy = null; render();
+}
+async function remove(a) {
+  confirmDel = null;
+  try { await api("/api/delete", { id: a.id }); await refresh(); } catch { show("Couldn't remove it. Try again.", "bad"); }
+}
+
+/* pictures */
+function openPic(a) { picFor = a; $("pic-title").textContent = "Picture for " + a.name; $("pic-url").value = ""; $("pic-file").value = ""; $("pic-msg").textContent = ""; $("pic-remove").hidden = !a.image; $("pic-ov").hidden = false; $("pic-url").focus(); }
+function closePic() { $("pic-ov").hidden = true; picFor = null; }
+$("pic-close").addEventListener("click", closePic);
+$("pic-ov").addEventListener("click", (e) => { if (e.target === $("pic-ov")) closePic(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("pic-ov").hidden) closePic(); });
+$("pic-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const url = $("pic-url").value.trim(); if (!url) return;
+  $("pic-msg").textContent = "Downloading…";
+  try { await api("/api/image-url", { id: picFor.id, url }); closePic(); show("Picture added.", "ok"); await refresh(); }
+  catch (err) { $("pic-msg").textContent = "Couldn't use that link: " + (err.message || "unknown problem") + "."; }
+});
+$("pic-file").addEventListener("change", async () => {
+  const f = $("pic-file").files[0]; if (!f) return;
+  if (f.size > 10 * 1024 * 1024) { $("pic-msg").textContent = "That picture is over 10 MB. Pick a smaller one."; return; }
+  $("pic-msg").textContent = "Saving…";
+  try { await api("/api/image-file?id=" + encodeURIComponent(picFor.id), f, true); closePic(); show("Picture added.", "ok"); await refresh(); }
+  catch (err) { $("pic-msg").textContent = "Couldn't use that file: " + (err.message || "unknown problem") + "."; }
+});
+$("pic-remove").addEventListener("click", async () => {
+  try { await api("/api/image-remove", { id: picFor.id }); closePic(); await refresh(); } catch { $("pic-msg").textContent = "Couldn't remove it. Try again."; }
+});
+
+/* settings (PC only) */
+function renderSettings() {
+  $("settings-box").hidden = false;
+  const s = state.settings || {};
+  if (!settingsLoaded) {
+    $("s-host").value = s.vrchatHost; $("s-send").value = s.sendPort; $("s-recv").value = s.receivePort; $("s-page").value = s.pagePort;
+    $("s-confirm").checked = !!s.confirm; $("s-phone").checked = !!s.phoneAccess;
+    settingsLoaded = true;
+  }
+  $("phone-info").hidden = !s.phoneAccess;
+  $("pin").textContent = s.pin || "";
+  $("lan").textContent = state.lan?.length ? "On your phone, open " + state.lan.join("  or  ") + " (or use the Android app)." : "No Wi-Fi network found on this PC.";
+}
+async function saveSettings(extra = {}) {
+  const body = { vrchatHost: $("s-host").value.trim(), sendPort: +$("s-send").value, receivePort: +$("s-recv").value, pagePort: +$("s-page").value,
+    confirm: $("s-confirm").checked, phoneAccess: $("s-phone").checked, ...extra };
+  try {
+    const r = await api("/api/settings", body);
+    settingsLoaded = false;
+    if (r.restartPage && r.url && !location.href.startsWith(r.url)) { show("Saved. Opening the page on its new port…", "ok"); setTimeout(() => (location.href = r.url), 1200); return; }
+    show(r.restartPage ? "Saved. Phone access " + (body.phoneAccess ? "is on." : "is off.") : "Settings saved.", "ok");
+    setTimeout(refresh, r.restartPage ? 1200 : 0);
+  } catch (err) { show("Couldn't save: " + err.message, "bad"); }
+}
+$("settings-form").addEventListener("submit", (e) => { e.preventDefault(); saveSettings(); });
+$("new-pin").addEventListener("click", () => saveSettings({ newPin: true }));
+$("s-reset").addEventListener("click", () => { $("s-host").value = "127.0.0.1"; $("s-send").value = 9000; $("s-recv").value = 9001; $("s-page").value = 9010; $("s-confirm").checked = true; });
+
+/* import + add */
+$("file").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const r = await api("/api/import", JSON.parse(await f.text()));
+    show(r.added ? `Imported ${r.added} avatar${r.added === 1 ? "" : "s"}.` : "Nothing new to import. Those avatars are already here.", "ok");
+    await refresh();
+  } catch { show("That file isn't an Avatar Vault backup. In Avatar Vault, tap Export backup and choose that file.", "bad"); }
+});
+$("add-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const m = $("add-id").value.match(ID_RE);
+  if (!m) { show("That isn't an avatar ID. It starts with avtr_ followed by a 36-character code.", "bad"); return; }
+  try {
+    const r = await api("/api/add", { id: m[0], name: $("add-name").value.trim() });
+    show(r.added ? "Added. Tap Add picture to give it a picture." : "That avatar is already in your list.", "ok");
+    $("add-id").value = ""; $("add-name").value = ""; await refresh();
+  } catch { show("Couldn't add it. Try again.", "bad"); }
+});
+$("q").addEventListener("input", render);
+if (!onPC) $("import-btn").hidden = true;
+if (navigator.userAgent.includes("AvatarSwitcherApp")) $("change-pc").hidden = false;
+refresh();
+setInterval(() => { if (!busy && document.visibilityState === "visible" && $("pic-ov").hidden) refresh(); }, 5000);
+</script>
+</body>
+</html>

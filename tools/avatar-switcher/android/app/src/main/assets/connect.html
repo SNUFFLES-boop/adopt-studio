@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect to your PC</title>
+<style>
+  :root { --bg: #121120; --surface: #1c1a2e; --fg: #ecebf6; --muted: #a29ec0; --line: #34304f; --accent: #9d86ff; --accent-fg: #14112a; --bad: #ff7d93; --bad-soft: #45202a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-size: 26px; margin: 8px 0 0; }
+  p, li { color: var(--muted); font-size: 14.5px; }
+  ol { margin: 0; padding-left: 20px; }
+  form { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  label { font-weight: 600; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+  input { font: 18px ui-monospace, monospace; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+  button { font: inherit; font-weight: 700; padding: 13px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); }
+  .err { background: var(--bad-soft); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 14px; }
+  .row { display: flex; gap: 10px; }
+  .row label:first-child { flex: 1; }
+  .row label:last-child { width: 96px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <h1>Avatar Switcher</h1>
+  <p style="margin:0">Control VRChat on your PC from your phone.</p>
+  <div class="err" id="err" hidden></div>
+  <form id="f">
+    <div class="row">
+      <label for="ip">PC address<input id="ip" inputmode="decimal" placeholder="192.168.1.20" autocomplete="off" required></label>
+      <label for="port">Port<input id="port" inputmode="numeric" value="9010" autocomplete="off"></label>
+    </div>
+    <button type="submit">Connect</button>
+  </form>
+  <div>
+    <p style="margin:0 0 6px;font-weight:600;color:var(--fg)">Where to find the address</p>
+    <ol>
+      <li>On your PC, open Avatar Switcher and go to <b>Settings: OSC and phone access</b>.</li>
+      <li>Tick <b>Phone access</b> and save.</li>
+      <li>It shows "On your phone, open http://<b>192.168.x.x</b>:9010". Type that address here.</li>
+      <li>Then enter the 6-digit PIN it shows.</li>
+    </ol>
+    <p>Your phone and PC must be on the same Wi-Fi.</p>
+  </div>
+<script>
+const q = new URLSearchParams(location.search);
+if (q.get("error")) { const e = document.getElementById("err"); e.textContent = q.get("error"); e.hidden = false; }
+const last = q.get("last");
+if (last) { try { const u = new URL(last); document.getElementById("ip").value = u.hostname; document.getElementById("port").value = u.port || "9010"; } catch {} }
+document.getElementById("f").addEventListener("submit", (e) => {
+  e.preventDefault();
+  let ip = document.getElementById("ip").value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  let port = document.getElementById("port").value.trim() || "9010";
+  if (ip.includes(":")) { [ip, port] = ip.split(":"); }
+  if (!/^[\w.-]+$/.test(ip) || !/^\d{2,5}$/.test(port)) {
+    const err = document.getElementById("err"); err.textContent = "That doesn't look like an address. It looks like 192.168.1.20."; err.hidden = false; return;
+  }
+  window.AvatarSwitcherApp.connect("http://" + ip + ":" + port + "/");
+});
+</script>
+</body>
+</html>
