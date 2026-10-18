@@ -26,8 +26,8 @@ SETTINGS (bottom of the page, on the PC only)
   "New PIN" signs out every phone. Phones can't change settings.
 
 PHONE
-Install the Android app (AvatarSwitcher.apk), turn on Phone access on the PC, then type the
-address and PIN the PC shows. Or open that address in your phone's browser.
+Install the Android app (AvatarSwitcher.apk). On the PC, click "Turn on phone access" in the
+"Connect your phone" box at the top, then type the address and PIN it shows into the app. Or open that address in your phone's browser.
 If Windows asks about the firewall, allow Private networks only.
 
 GOOD TO KNOW

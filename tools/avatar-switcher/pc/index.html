@@ -63,6 +63,11 @@
   .dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(460px, 100%); display: flex; flex-direction: column; gap: 10px; }
   .dialog h2 { margin: 0; font-size: 18px; }
   .dialog ol { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+  .phone { background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .phone-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .phone-title { font-weight: 700; font-size: 16px; }
+  .phone-grid { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+  .big { font: 700 26px ui-monospace, Consolas, monospace; letter-spacing: .04em; overflow-wrap: anywhere; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -75,6 +80,16 @@
     </div>
     <a class="btn small" id="change-pc" href="avatarswitcher://connect" hidden>Change PC</a>
   </div>
+  <section class="phone" id="phone-card" hidden>
+    <div class="phone-head"><span class="phone-title">📱 Connect your phone</span>
+      <button class="btn small" type="button" id="phone-toggle"></button></div>
+    <div id="phone-off"><p class="note">Use the Avatar Switcher Android app, or your phone's browser, to switch avatars from your phone. Your phone must be on the same Wi-Fi as this PC.</p></div>
+    <div id="phone-on" class="phone-grid" hidden>
+      <div><p class="note">Address</p><div class="big" id="phone-addr"></div><p class="note" id="phone-port"></p></div>
+      <div><p class="note">PIN</p><div class="big" id="phone-pin"></div></div>
+    </div>
+    <p class="note" id="phone-hint" hidden>If your phone can't connect, Windows Firewall may be blocking it: when Windows asks, allow Avatar Switcher on <b>Private networks</b>.</p>
+  </section>
   <div id="status" class="status" hidden aria-live="polite"></div>
   <div id="warn" class="status warn" hidden></div>
   <div class="bar">
@@ -243,7 +258,20 @@ function renderSettings() {
   $("phone-info").hidden = !s.phoneAccess;
   $("pin").textContent = s.pin || "";
   $("lan").textContent = state.lan?.length ? "On your phone, open " + state.lan.join("  or  ") + " (or use the Android app)." : "No Wi-Fi network found on this PC.";
+  renderPhone();
 }
+function renderPhone() {
+  const s = state.settings || {};
+  $("phone-card").hidden = false;
+  $("phone-off").hidden = !!s.phoneAccess; $("phone-on").hidden = !s.phoneAccess; $("phone-hint").hidden = !s.phoneAccess;
+  $("phone-toggle").textContent = s.phoneAccess ? "Turn off" : "Turn on phone access";
+  $("phone-toggle").className = s.phoneAccess ? "btn small" : "btn primary";
+  const hosts = (state.lan || []).map((u) => { try { return new URL(u).hostname; } catch { return u; } });
+  $("phone-addr").textContent = hosts.length ? hosts.join("  or  ") : "No Wi-Fi network found";
+  $("phone-port").textContent = "Port " + s.pagePort + (s.pagePort === 9010 ? " (already filled in on the app)" : "");
+  $("phone-pin").textContent = s.pin || "";
+}
+$("phone-toggle").addEventListener("click", () => { $("s-phone").checked = !state.settings?.phoneAccess; saveSettings(); });
 async function saveSettings(extra = {}) {
   const body = { vrchatHost: $("s-host").value.trim(), sendPort: +$("s-send").value, receivePort: +$("s-recv").value, pagePort: +$("s-page").value,
     confirm: $("s-confirm").checked, phoneAccess: $("s-phone").checked, ...extra };
