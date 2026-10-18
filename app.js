@@ -66,6 +66,7 @@ function card(a) {
         (a.features || []).map((f) => el("span", { class: "pill" }, f))),
       a.description ? el("p", { class: "desc" }, a.description) : null,
       el("div", { class: "foot" },
+        el("button", { class: "btn small", type: "button", onclick: () => openDetails(a) }, "Details"),
         a.model ? el("button", { class: "btn small", type: "button", onclick: () => open3D(a) }, "View in 3D") : null,
         a.state !== "sold" && link ? el("a", { class: "btn primary small", href: link, target: "_blank", rel: "noopener" }, "Buy") : null,
         a.state !== "sold" ? el("button", { class: "btn small", type: "button", onclick: () => { S.form = { item: a.name }; S.sent = null; go("buy"); } }, link ? "Ask about it" : "Request to buy") : null)));
@@ -82,6 +83,41 @@ function loadViewerLib() {
     s.onerror = () => { viewerLib = null; no(); };
     document.head.append(s);
   }));
+}
+function openModal(label, ...body) {
+  const close = () => { ov.remove(); document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const ov = el("div", { class: "viewer-ov", role: "dialog", "aria-modal": "true", "aria-label": label, onclick: (e) => { if (e.target === ov) close(); } },
+    el("div", { class: "viewer details" },
+      el("div", { class: "viewer-head" }, el("h3", {}, label), el("button", { class: "btn small", type: "button", "aria-label": "Close", onclick: close }, "✕")),
+      ...body));
+  document.body.append(ov); document.body.style.overflow = "hidden";
+  document.addEventListener("keydown", onKey);
+  ov.querySelector("button").focus();
+  return close;
+}
+function openDetails(a) {
+  const link = safeLink(a.link);
+  const rows = [
+    ["Price", hasPrice(a) ? money(a.price) + (a.priceNote ? " · " + a.priceNote : "") : "Ask for price"],
+    ["Availability", (STATES[a.state] || STATES.available)[0]],
+    a.platform ? ["Platform", PLATFORMS[a.platform] || a.platform] : null,
+    ["Category", a.category || "Other"],
+    ...(a.specs || []).filter((x) => x && x.label).map((x) => [x.label, x.value || "Yes"]),
+  ].filter(Boolean);
+  let close;
+  const act = (fn) => () => { close(); fn(); };
+  close = openModal(a.name,
+    el("div", { class: "details-body" },
+      a.image ? el("img", { class: "details-img", src: safeLink(a.image), alt: "Picture of " + a.name }) : null,
+      a.description ? el("p", { class: "desc", style: "margin:0" }, a.description) : null,
+      (a.features || []).length ? el("div", { class: "pills" }, a.features.map((f) => el("span", { class: "pill" }, f))) : null,
+      el("table", { class: "specs" }, el("tbody", {}, rows.map(([k, v]) => el("tr", {}, el("th", { scope: "row" }, k), el("td", {}, v))))),
+      (a.included || []).length ? el("div", {}, el("h4", {}, "What's included"), el("ul", { class: "incl" }, a.included.map((i) => el("li", {}, i)))) : null),
+    el("div", { class: "foot", style: "display:flex;flex-wrap:wrap;gap:8px" },
+      a.model ? el("button", { class: "btn", type: "button", onclick: act(() => open3D(a)) }, "View in 3D") : null,
+      a.state !== "sold" && link ? el("a", { class: "btn primary", href: link, target: "_blank", rel: "noopener" }, "Buy") : null,
+      a.state !== "sold" ? el("button", { class: link ? "btn" : "btn primary", type: "button", onclick: act(() => { S.form = { item: a.name }; S.sent = null; go("buy"); }) }, "Request to buy") : null));
 }
 function open3D(a) {
   const src = safeLink(a.model);

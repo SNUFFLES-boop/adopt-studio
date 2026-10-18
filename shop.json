@@ -20,6 +20,20 @@
       "platform": "both",
       "features": [
         "Physics"
+      ],
+      "specs": [
+        {
+          "label": "SDK",
+          "value": "VRChat SDK 3.0 (Avatars)"
+        },
+        {
+          "label": "PhysBones",
+          "value": "Yes"
+        },
+        {
+          "label": "Polygons",
+          "value": "28k"
+        }
       ]
     }
   ],

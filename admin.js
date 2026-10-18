@@ -196,6 +196,8 @@ function openSheet({ title, fields, values = {}, onSave, onDelete }) {
     const id = "sf-" + fd.key; const v = values[fd.key];
     let input;
     if (fd.type === "textarea") input = el("textarea", { id, style: fd.tall ? "min-height:260px" : null }, v ?? "");
+    else if (fd.type === "lines") input = el("textarea", { id, placeholder: fd.placeholder || null }, (v || []).join("\n"));
+    else if (fd.type === "specs") input = el("textarea", { id, style: "min-height:140px", placeholder: fd.placeholder || null }, (v || []).map((x) => `${x.label}: ${x.value}`).join("\n"));
     else if (fd.type === "select") input = el("select", { id }, fd.options.map(([ov, ol]) => el("option", { value: ov, selected: String(v ?? fd.default ?? "") === ov }, ol)));
     else if (fd.type === "image") {
       const pv = el("div", { class: "pv" }, v ? el("img", { src: v, alt: "" }) : "None");
@@ -232,6 +234,10 @@ $("sheet-form").addEventListener("submit", async (e) => {
     const n = $("sf-" + fd.key);
     if (fd.type === "number") out[fd.key] = n.value === "" ? "" : Number(n.value);
     else if (fd.type === "list") out[fd.key] = n.value.split(",").map((s) => s.trim()).filter(Boolean);
+    else if (fd.type === "lines") out[fd.key] = n.value.split("\n").map((s) => s.trim()).filter(Boolean);
+    else if (fd.type === "specs") out[fd.key] = n.value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const i = l.indexOf(":"); return i > 0 ? { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() } : { label: l, value: "Yes" };
+    });
     else out[fd.key] = n.value.trim();
     if (fd.required && !out[fd.key]) { const er = $("sf-err"); er.textContent = fd.label + " is required."; er.hidden = false; return; }
   }
@@ -265,6 +271,8 @@ function editAvatar(i) {
       { key: "platform", label: "Platform", type: "select", default: "both", options: Object.entries(PLATFORMS) },
       { key: "features", label: "Features", type: "list", hint: "Separate with commas, e.g. toggles, phys bones, face tracking" },
       { key: "description", label: "Description", type: "textarea" },
+      { key: "specs", label: "Details", type: "specs", hint: "Shown when buyers tap Details. One per line as 'Name: value'", placeholder: "SDK: VRChat SDK 3.0 (Avatars)\nPolygons: 28k\nPhysBones: Ears, tail, hair\nFace tracking: No" },
+      { key: "included", label: "What's included", type: "lines", hint: "One per line", placeholder: "Unity package (.unitypackage)\nPC and Quest versions\nTextures (PNG)" },
       { key: "link", label: "Store link", hint: "Booth, Gumroad, Payhip… Leave empty to take requests on Discord instead", placeholder: "https://" },
     ],
     onSave: async (d, file, modelFile) => {
