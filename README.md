@@ -1,8 +1,22 @@
 # Adopt-Studio
 
 Website for prebuilt VRChat avatars. Everything shown on the site comes from
-`shop.json`. Edit that file on GitHub (open it, click the pencil, then **Commit changes**)
-and the site updates in about a minute.
+`shop.json`.
+
+## Easiest way: the Manage page
+
+Open `admin.html` on the website (the **Owner login** link at the bottom of the shop).
+Sign in with a fine-grained GitHub token that can only change this repository
+(Contents: Read and write). From there you can add avatars with pictures, edit them,
+mark them sold or delete them, and change shop settings and terms. Each save commits to
+this repository and the website updates in about a minute.
+
+Nobody else can change the shop: the page only works with your token. Never share it.
+
+## Editing by hand
+
+You can also edit `shop.json` on GitHub (open it, click the pencil, then
+**Commit changes**). The site updates in about a minute.
 
 ## Adding an avatar
 
