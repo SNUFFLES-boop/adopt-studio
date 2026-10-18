@@ -109,7 +109,7 @@ function viewBuy() {
   const s = S.shop;
   return el("section", { class: "wrap", style: "gap:18px" },
     el("div", { class: "section-head" }, el("div", {}, el("h2", {}, "How to buy"),
-      el("p", {}, "Tap Buy on an avatar to go to its store page, or fill in the form to get a message you can send me."))),
+      el("p", {}, webhook() ? `Tap Buy on an avatar to go to its store page, or send ${seller()} a request below.` : "Tap Buy on an avatar to go to its store page, or fill in the form to get a message you can send me."))),
     el("div", { class: "two" }, requestForm(),
       el("div", { class: "panel" }, el("h3", { style: "font:700 16px var(--font-display);margin:0" }, "Payment and terms"),
         s.payment ? el("p", { class: "terms" }, el("b", {}, "Payment: "), s.payment) : null,
@@ -123,7 +123,7 @@ function requestForm() {
   const s = S.shop;
   const options = avatars().filter((a) => a.state !== "sold").map((a) => a.name);
   if (S.sent) return el("div", { class: "panel" },
-    S.delivered ? el("div", { class: "okmsg" }, "Request sent! I'll reply to you at " + S.form.contact + ".")
+    S.delivered ? el("div", { class: "okmsg" }, el("b", {}, `Sent to ${seller()}! ✓`), el("br"), `${seller()} will reply to you at ${S.form.contact}.`)
       : el("div", { class: S.sendError ? "banner" : "okmsg" }, S.sendError || "Your request is ready to send."),
     S.delivered ? el("p", { class: "note" }, "A copy of what you sent is below.")
       : el("p", { class: "note" }, "Copy it and send it to me" + (contactLine() ? " " + contactLine() : "") + "."),
@@ -147,9 +147,10 @@ function requestForm() {
     f("rq-details", "Message", el("textarea", { id: "rq-details", placeholder: "Questions, how you'd like to pay, anything else…" }, S.form.details || "")),
     el("span", { class: "err", id: "rq-err", hidden: true }),
     el("div", {}, el("button", { class: "btn primary", type: "submit", id: "rq-submit" }, webhook() ? "Send request" : "Create request")),
-    el("p", { class: "note" }, webhook() ? "Your request goes straight to me on Discord."
+    el("p", { class: "note" }, webhook() ? `Your request goes straight to ${seller()} on Discord.`
       : "You'll get a ready-made message to copy and send to me" + (contactLine() ? " " + contactLine() : "") + "."));
 }
+const seller = () => (S.shop?.seller || "").trim() || S.shop?.name || "the seller";
 function webhook() {
   const u = S.shop?.webhook;
   return typeof u === "string" && /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(u) ? u : null;

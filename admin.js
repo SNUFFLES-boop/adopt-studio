@@ -180,7 +180,7 @@ async function quickState(i, state) {
 }
 function viewSettings() {
   const s = S.shop;
-  const rows = [["Shop name", s.name], ["Tagline", s.tagline], ["Currency", s.currency], ["Discord", s.discord || "Not set"], ["Email", s.email || "Not set"], ["Other contact", s.otherContact || "Not set"], ["Discord requests", s.webhook ? "On (webhook set)" : "Off"], ["Payment", s.payment]];
+  const rows = [["Shop name", s.name], ["Your name", s.seller || "Not set"], ["Tagline", s.tagline], ["Currency", s.currency], ["Discord", s.discord || "Not set"], ["Email", s.email || "Not set"], ["Other contact", s.otherContact || "Not set"], ["Discord requests", s.webhook ? "On (webhook set)" : "Off"], ["Payment", s.payment]];
   return el("div", { class: "panel" }, el("div", { class: "section-head" }, el("h2", {}, "Shop settings"), el("button", { class: "btn primary", type: "button", onclick: editSettings }, "Edit settings")),
     el("div", { class: "tablewrap" }, el("table", { style: "min-width:0" }, el("tbody", {}, rows.map(([k, v]) => el("tr", {}, el("th", { style: "width:34%" }, k), el("td", { style: "overflow-wrap:anywhere" }, v || "—")))))),
     el("p", { class: "note" }, "Terms of service are edited from the same button."));
@@ -300,6 +300,7 @@ function editSettings() {
       { key: "name", label: "Shop name", required: true },
       { key: "tagline", label: "Tagline", type: "textarea" },
       { key: "currency", label: "Currency symbol", placeholder: "$" },
+      { key: "seller", label: "Your name", hint: "Shown to buyers, e.g. 'Sent to Deltro!'" },
       { key: "discord", label: "Discord username", hint: "Shown to buyers so they can send you requests" },
       { key: "email", label: "Email", hint: "Optional" },
       { key: "otherContact", label: "Other contact", hint: "Optional, e.g. 'Twitter @name'" },
