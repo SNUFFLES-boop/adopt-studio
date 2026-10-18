@@ -74,8 +74,27 @@ async function uploadImage(file, name) {
   await gh("/contents/" + path, { method: "PUT", body: JSON.stringify({ message: "Add picture for " + (name || "avatar"), content: data, branch: S.branch }) });
   return path;
 }
+async function uploadModel(file, name) {
+  const slug = (name || "avatar").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "avatar";
+  const path = `models/${slug}-${Date.now().toString(36)}.glb`;
+  const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = no; r.readAsDataURL(file); });
+  try {
+    await gh("/contents/" + path, { method: "PUT", body: JSON.stringify({ message: "Add 3D model for " + (name || "avatar"), content: data, branch: S.branch }) });
+  } catch (e) {
+    if (e.status !== 401) throw Object.assign(new Error("GitHub didn't accept the 3D file. Try a smaller preview version (under 15 MB)."), { friendly: true });
+    throw e;
+  }
+  return path;
+}
+const MODEL_MAX = 25 * 1024 * 1024;
+async function checkModel(file) {
+  if (file.size > MODEL_MAX) return "That 3D file is over 25 MB. Export a lighter preview version (fewer polygons, smaller textures).";
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  if (String.fromCharCode(...head) !== "glTF") return "That isn't a .glb file. Export the avatar from Unity or Blender as glTF Binary (.glb).";
+  return null;
+}
 async function deleteImage(path) {
-  if (!path || !path.startsWith("images/")) return;
+  if (!path || !/^(images|models)\//.test(path)) return;
   try {
     const f = await gh(`/contents/${path}?ref=${encodeURIComponent(S.branch)}`);
     await gh("/contents/" + path, { method: "DELETE", body: JSON.stringify({ message: "Remove " + path, sha: f.sha, branch: S.branch }) });
@@ -144,7 +163,7 @@ function viewAvatars() {
       el("div", { class: "thumb" }, a.image ? el("img", { src: a.image, alt: "", loading: "lazy" }) : el("span", { class: "ph" }, (a.name || "?").slice(0, 1).toUpperCase()),
         el("span", { class: "state pill " + tone }, STATES[a.state] || "Available")),
       el("div", { class: "body" }, el("h3", {}, a.name), el("div", { class: "price" }, money(a.price)),
-        el("div", { class: "pills" }, el("span", { class: "pill accent" }, a.category || "Other"), a.platform ? el("span", { class: "pill info" }, PLATFORMS[a.platform]) : null),
+        el("div", { class: "pills" }, el("span", { class: "pill accent" }, a.category || "Other"), a.platform ? el("span", { class: "pill info" }, PLATFORMS[a.platform]) : null, a.model ? el("span", { class: "pill" }, "3D") : null),
         el("div", { class: "foot" },
           el("button", { class: "btn small", type: "button", onclick: () => editAvatar(i) }, "Edit"),
           el("label", { class: "f", style: "flex-direction:row;align-items:center;gap:6px" },
@@ -168,9 +187,9 @@ function viewSettings() {
 }
 
 /* ---------- edit sheet ---------- */
-const sheet = { onSave: null, onDelete: null, file: undefined };
+const sheet = { onSave: null, onDelete: null, file: undefined, model: undefined };
 function openSheet({ title, fields, values = {}, onSave, onDelete }) {
-  sheet.onSave = onSave; sheet.onDelete = onDelete; sheet.file = undefined;
+  sheet.onSave = onSave; sheet.onDelete = onDelete; sheet.file = undefined; sheet.model = undefined;
   $("sheet-title").textContent = title;
   const form = $("sheet-form"); form.replaceChildren();
   for (const fd of fields) {
@@ -183,6 +202,16 @@ function openSheet({ title, fields, values = {}, onSave, onDelete }) {
       input = el("div", { class: "imgpick" }, pv, el("div", { style: "display:flex;flex-direction:column;gap:6px" },
         el("input", { id, type: "file", accept: "image/*", onchange: (e) => { const f = e.target.files[0]; if (!f) return; sheet.file = f; pv.replaceChildren(el("img", { src: URL.createObjectURL(f), alt: "" })); } }),
         el("button", { class: "btn small", type: "button", style: "align-self:start", onclick: () => { sheet.file = null; $(id).value = ""; pv.textContent = "None"; } }, "Remove picture")));
+    } else if (fd.type === "model") {
+      const info = el("span", { class: "note", id: "sf-model-info" }, v ? "Current: " + v.split("/").pop() : "No 3D model");
+      input = el("div", { style: "display:flex;flex-direction:column;gap:6px" }, info,
+        el("input", { id, type: "file", accept: ".glb,model/gltf-binary", onchange: async (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          const problem = await checkModel(f);
+          if (problem) { e.target.value = ""; sheet.model = undefined; info.textContent = problem; return; }
+          sheet.model = f; info.textContent = `Ready to upload: ${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
+        } }),
+        el("button", { class: "btn small", type: "button", style: "align-self:start", onclick: () => { sheet.model = null; $(id).value = ""; info.textContent = "3D model will be removed"; } }, "Remove 3D model"));
     } else input = el("input", { id, type: fd.type || "text", value: Array.isArray(v) ? v.join(", ") : v ?? "", step: fd.type === "number" ? "0.01" : null, min: fd.type === "number" ? "0" : null, placeholder: fd.placeholder || null });
     form.append(el("label", { class: "f", for: fd.type === "image" ? null : id }, fd.label, fd.hint ? el("span", { class: "hint" }, fd.hint) : null, input));
   }
@@ -199,7 +228,7 @@ $("sheet-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const out = {};
   for (const fd of e.target._fields) {
-    if (fd.type === "image") continue;
+    if (fd.type === "image" || fd.type === "model") continue;
     const n = $("sf-" + fd.key);
     if (fd.type === "number") out[fd.key] = n.value === "" ? 0 : Number(n.value);
     else if (fd.type === "list") out[fd.key] = n.value.split(",").map((s) => s.trim()).filter(Boolean);
@@ -207,7 +236,7 @@ $("sheet-form").addEventListener("submit", async (e) => {
     if (fd.required && !out[fd.key]) { const er = $("sf-err"); er.textContent = fd.label + " is required."; er.hidden = false; return; }
   }
   $("sheet-save").disabled = true; busy("Saving to your website…");
-  try { await sheet.onSave(out, sheet.file); closeSheet(); toast("Saved. The website updates in about a minute."); render(); }
+  try { await sheet.onSave(out, sheet.file, sheet.model); closeSheet(); toast("Saved. The website updates in about a minute."); render(); }
   catch (ex) { const er = $("sf-err"); er.textContent = ex.friendly ? ex.message : ex.status === 401 ? "Your GitHub key expired or was deleted. Sign out and sign in with a new one." : "Couldn't save. Check your connection and try again."; er.hidden = false; }
   finally { $("sheet-save").disabled = false; busy(); }
 });
@@ -228,6 +257,7 @@ function editAvatar(i) {
     fields: [
       { key: "name", label: "Avatar name", required: true },
       { key: "image", label: "Picture", type: "image" },
+      { key: "model", label: "3D model (optional)", type: "model", hint: "A .glb preview so buyers can tap View in 3D. Anyone can download it, so use a lighter preview, not your full avatar." },
       { key: "category", label: "Category", hint: cats.length ? "Existing: " + cats.join(", ") : "e.g. Anime, Furry, Feline, Robot", placeholder: "Anime" },
       { key: "price", label: "Price (" + (S.shop.currency || "$") + ")", type: "number" },
       { key: "priceNote", label: "Price note", hint: "Optional, e.g. 'one copy only' or 'incl. Quest version'" },
@@ -237,25 +267,29 @@ function editAvatar(i) {
       { key: "description", label: "Description", type: "textarea" },
       { key: "link", label: "Store link", hint: "Booth, Gumroad, Payhip… Leave empty to take requests on Discord instead", placeholder: "https://" },
     ],
-    onSave: async (d, file) => {
+    onSave: async (d, file, modelFile) => {
       if (d.link && !/^https?:\/\//i.test(d.link)) d.link = "https://" + d.link;
-      const oldImage = a?.image;
-      let image = a?.image || "";
+      const oldImage = a?.image, oldModel = a?.model;
+      let image = a?.image || "", model = a?.model || "";
       if (file) image = await uploadImage(file, d.name);
       else if (file === null) image = "";
-      const next = { ...(a || {}), ...d, image };
+      if (modelFile) { busy("Uploading 3D model…"); model = await uploadModel(modelFile, d.name); busy("Saving to your website…"); }
+      else if (modelFile === null) model = "";
+      const next = { ...(a || {}), ...d, image, model };
       for (const k of Object.keys(next)) if (next[k] === "" || (Array.isArray(next[k]) && !next[k].length)) delete next[k];
       const before = S.shop.avatars.slice();
       if (a) S.shop.avatars[i] = next; else S.shop.avatars.push(next);
       try { await saveShop((a ? "Update " : "Add ") + next.name); }
       catch (e) { S.shop.avatars = before; throw e; }
       if (oldImage && oldImage !== image) deleteImage(oldImage);
+      if (oldModel && oldModel !== model) deleteImage(oldModel);
     },
     onDelete: a ? async () => {
       const before = S.shop.avatars.slice();
       S.shop.avatars.splice(i, 1);
       try { await saveShop("Remove " + a.name); } catch (e) { S.shop.avatars = before; throw e; }
       deleteImage(a.image);
+      deleteImage(a.model);
     } : null,
   });
 }

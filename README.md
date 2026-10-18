@@ -52,6 +52,15 @@ You can also edit `shop.json` on GitHub (open it, click the pencil, then
 | `features` | Optional list of short tags |
 | `description` | Optional text |
 | `link` | Optional store page (Booth, Gumroad, Payhip). Shows a **Buy** button |
+| `model` | Optional 3D preview, e.g. `models/neon-fox.glb`. Shows a **View in 3D** button |
+
+### 3D previews
+
+Export the avatar from Unity as a `.glb` (UniGLTF / UniVRM or glTFast exporter), or export
+FBX and convert it in Blender with **File → Export → glTF 2.0 (.glb)**. Anyone can download
+a 3D file shown on a website, so upload a lighter preview (fewer polygons, smaller
+textures, no bones or extras), not the full avatar. Keep it under 15 MB so it loads fast
+on phones.
 
 Other settings at the top of `shop.json`: `name`, `tagline`, `currency`, `discord`,
 `email`, `otherContact`, `payment` and `terms`.

@@ -65,8 +65,43 @@ function card(a) {
         (a.features || []).map((f) => el("span", { class: "pill" }, f))),
       a.description ? el("p", { class: "desc" }, a.description) : null,
       el("div", { class: "foot" },
+        a.model ? el("button", { class: "btn small", type: "button", onclick: () => open3D(a) }, "View in 3D") : null,
         a.state !== "sold" && link ? el("a", { class: "btn primary small", href: link, target: "_blank", rel: "noopener" }, "Buy") : null,
         a.state !== "sold" ? el("button", { class: "btn small", type: "button", onclick: () => { S.form = { item: a.name }; S.sent = null; go("buy"); } }, link ? "Ask about it" : "Request to buy") : null)));
+}
+
+// 3D viewer: Google's <model-viewer>, loaded only the first time someone opens a model.
+let viewerLib;
+function loadViewerLib() {
+  return (viewerLib ||= new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.type = "module";
+    s.src = "https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js";
+    s.onload = () => customElements.whenDefined("model-viewer").then(ok);
+    s.onerror = () => { viewerLib = null; no(); };
+    document.head.append(s);
+  }));
+}
+function open3D(a) {
+  const src = safeLink(a.model);
+  if (!src) return;
+  const stage = el("div", { class: "viewer-stage" }, el("p", { class: "note" }, "Loading 3D viewer…"));
+  const close = () => { ov.remove(); document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const ov = el("div", { class: "viewer-ov", role: "dialog", "aria-modal": "true", "aria-label": "3D view of " + a.name, onclick: (e) => { if (e.target === ov) close(); } },
+    el("div", { class: "viewer" },
+      el("div", { class: "viewer-head" }, el("h3", {}, a.name), el("button", { class: "btn small", type: "button", "aria-label": "Close 3D view", onclick: close }, "✕")),
+      stage,
+      el("p", { class: "note" }, "Drag to rotate · pinch or scroll to zoom · 3D preview, the avatar you buy may have more detail")));
+  document.body.append(ov); document.body.style.overflow = "hidden";
+  document.addEventListener("keydown", onKey);
+  loadViewerLib().then(() => {
+    const mv = el("model-viewer", { src, alt: "3D model of " + a.name, "camera-controls": true, "auto-rotate": true, "auto-rotate-delay": "1500",
+      ar: true, "ar-modes": "webxr scene-viewer quick-look", "shadow-intensity": "1", exposure: "1", "touch-action": "pan-y",
+      poster: a.image ? safeLink(a.image) : null, style: "width:100%;height:100%;background:transparent" });
+    mv.addEventListener("error", () => stage.replaceChildren(el("p", { class: "note" }, "Couldn't load this 3D model. Try again later.")));
+    stage.replaceChildren(mv);
+  }).catch(() => stage.replaceChildren(el("p", { class: "note" }, "Couldn't load the 3D viewer. Check your connection and try again.")));
 }
 
 function viewBuy() {

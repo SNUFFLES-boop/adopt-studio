@@ -152,3 +152,14 @@ td select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line);
 .imgpick .pv img { width: 100%; height: 100%; object-fit: cover; }
 .toast { position: fixed; left: 50%; translate: -50% 0; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; }
 @media (prefers-reduced-motion: no-preference) { .sheet { animation: slide .18s ease-out; } @keyframes slide { from { translate: 24px 0; opacity: .6; } } }
+
+/* 3D viewer */
+.viewer-ov { position: fixed; inset: 0; z-index: 50; background: rgb(10 8 20 / .6); display: grid; place-items: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.viewer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); width: min(720px, 100%); height: min(760px, 100%);
+  display: flex; flex-direction: column; gap: 10px; padding: 14px; box-shadow: var(--shadow); }
+.viewer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.viewer-head h3 { font: 700 17px var(--font-display); margin: 0; overflow-wrap: anywhere; }
+.viewer-stage { flex: 1; min-height: 0; border-radius: 12px; background: radial-gradient(circle at 50% 40%, var(--surface), var(--sunken)); display: grid; place-items: center; overflow: hidden; }
+.viewer-stage model-viewer { --poster-color: transparent; }
+.viewer .note { margin: 0; text-align: center; }
