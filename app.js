@@ -63,6 +63,7 @@ function card(a) {
       el("h3", {}, a.name),
       el("div", { class: "price" }, hasPrice(a) ? money(a.price) : "Ask for price", a.priceNote ? el("small", {}, " " + a.priceNote) : null),
       el("div", { class: "pills" }, el("span", { class: "pill accent" }, a.category || "Other"), a.platform ? el("span", { class: "pill info" }, PLATFORMS[a.platform] || a.platform) : null,
+        AVATAR_FIELDS.filter((f) => f.badge && f.badge[a[f.key]]).map((f) => el("span", { class: "pill " + f.badge[a[f.key]][1] }, f.badge[a[f.key]][0])),
         (a.features || []).map((f) => el("span", { class: "pill" }, f))),
       a.description ? el("p", { class: "desc" }, a.description) : null,
       el("div", { class: "foot" },
@@ -103,6 +104,9 @@ function openDetails(a) {
     ["Availability", (STATES[a.state] || STATES.available)[0]],
     a.platform ? ["Platform", PLATFORMS[a.platform] || a.platform] : null,
     ["Category", a.category || "Other"],
+    ...AVATAR_FIELDS.filter((f) => fieldValueLabel(f, a[f.key])).map((f) => [f.label,
+      f.rank ? el("span", { class: "pill " + (RANK_TONE[a[f.key]] || "") }, fieldValueLabel(f, a[f.key]))
+      : a[f.key] === "no" ? el("span", { class: "muted-val" }, fieldValueLabel(f, a[f.key])) : fieldValueLabel(f, a[f.key])]),
     ...(a.specs || []).filter((x) => x && x.label).map((x) => [x.label, x.value || "Yes"]),
   ].filter(Boolean);
   let close;

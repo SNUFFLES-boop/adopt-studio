@@ -174,3 +174,4 @@ table.specs th, table.specs td { text-align: left; padding: 8px 10px; border-bot
 table.specs th { width: 40%; color: var(--muted); font-weight: 600; font-size: 14px; text-transform: none; letter-spacing: 0; background: none; }
 table.specs tr:last-child th, table.specs tr:last-child td { border-bottom: 0; }
 .details-body h4 { font: 700 14px var(--font-display); margin: 0 0 6px; }
+.muted-val { color: var(--muted); }

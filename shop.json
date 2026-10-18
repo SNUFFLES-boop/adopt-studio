@@ -27,14 +27,11 @@
           "value": "VRChat SDK 3.0 (Avatars)"
         },
         {
-          "label": "PhysBones",
-          "value": "Yes"
-        },
-        {
           "label": "Polygons",
           "value": "28k"
         }
-      ]
+      ],
+      "physbones": "yes"
     }
   ],
   "webhook": "https://discord.com/api/webhooks/1561382161951498271/o5tx57CR9mqLMWdZyKpgV_PM0aZf8qsC6C_YSfH8H4smEXlf1TmlYdiGWXkSLR3y1B5A"
