@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adopt-Studio</title>
+<meta name="description" content="Ready-to-wear prebuilt VRChat avatars.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  html { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+  .site-foot { color: var(--muted); font-size: 12.5px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1 id="studio-name">Adopt-Studio</h1>
+      <p class="tag" id="studio-tag">Ready-to-wear prebuilt VRChat avatars.</p>
+    </div>
+    <div class="statusbox">
+      <span class="badge" id="avail-badge" hidden></span>
+      <div class="contact" id="contact"></div>
+    </div>
+  </header>
+  <div class="banner" id="banner" hidden></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="shop" aria-selected="true">Prebuilt avatars</button>
+    <button role="tab" data-tab="buy" aria-selected="false">How to buy</button>
+  </nav>
+  <main id="view"><p class="note">Loading avatars…</p></main>
+  <p class="site-foot">Avatars for VRChat. Not affiliated with VRChat Inc.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
