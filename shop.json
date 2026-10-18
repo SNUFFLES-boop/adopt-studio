@@ -16,7 +16,7 @@
       "category": "Furry",
       "state": "available",
       "description": "Spotted pup in an orange cropped hoodie with a shiba logo, collar and floppy ear.",
-      "price": 20,
+      "price": 5,
       "platform": "both",
       "specs": [
         {
@@ -43,5 +43,5 @@
     }
   ],
   "webhook": "https://discord.com/api/webhooks/1561382161951498271/o5tx57CR9mqLMWdZyKpgV_PM0aZf8qsC6C_YSfH8H4smEXlf1TmlYdiGWXkSLR3y1B5A",
-  "updatedAt": "2026-10-18T14:55:07.478Z"
+  "updatedAt": "2026-10-18T14:56:31.714Z"
 }
