@@ -7,5 +7,14 @@
   "otherContact": "",
   "payment": "Full payment before the files are delivered.",
   "terms": "TERMS OF SERVICE\nBy buying an avatar, you agree to these terms.\n\n1. BUYING\n• You must be 13 or older, or have a parent's permission.\n• Avatars are sold as shown in the pictures and description. Ask before buying if you're unsure about anything.\n• Avatars marked as one copy are sold to one buyer only and won't be sold again.\n\n2. PAYMENT\n• Full payment is due before the files are delivered.\n• Prices are in the currency shown on this page. Payment fees are paid by the buyer.\n• A Reserved avatar is held for 48 hours. If it isn't paid for by then, it goes back on sale.\n\n3. BASES AND ASSETS\n• If an avatar uses a paid base or paid assets, you must own a license for them before I send the files. I may ask for proof of purchase.\n• Every base and asset creator's terms still apply to you.\n\n4. REFUNDS\n• Avatars are digital goods, so there are no refunds once the files are delivered.\n• If a file is broken or missing, tell me within 7 days and I'll fix it.\n\n5. YOUR RIGHTS\n• You may upload and use the avatar on your own VRChat account(s).\n• Uploads must stay PRIVATE unless we agree otherwise in writing, and public uploads must also be allowed by every base and asset license.\n• You may edit the avatar for your own use, as long as the base's license allows it.\n• You may NOT resell, share, give away, leak or redistribute the files or any parts of them.\n• Credit is appreciated, e.g. 'Avatar by Deltro' in your bio.\n\n6. MY RIGHTS\n• I keep the rights to my own original work, such as custom textures and models I made.\n• I may keep showing pictures of the avatar in my shop and portfolio.\n\n7. BREAKING THESE TERMS\nIf you leak, resell or share files, or break a base's license, I'll stop selling to you, may report it to the platform, and you won't get a refund.\n\nI may update these terms. The version on this page when you buy is the one that applies to your purchase.",
-  "avatars": []
+  "avatars": [
+    {
+      "name": "Doggo",
+      "image": "images/doggo.webp",
+      "model": "models/doggo.glb",
+      "category": "Furry",
+      "state": "available",
+      "description": "Spotted pup in an orange cropped hoodie with a shiba logo, collar and floppy ear."
+    }
+  ]
 }

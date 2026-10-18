@@ -13,7 +13,7 @@ function el(tag, attrs = {}, ...kids) {
   return n;
 }
 function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2400); }
-function safeLink(u) { try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } }
+function safeLink(u) { if (!u || typeof u !== "string") return null; try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } }
 async function copyText(text, msg = "Copied") {
   try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Select the text and copy it manually"); }
 }
@@ -22,6 +22,7 @@ const STATES = { available: ["Available", "ok"], reserved: ["Reserved", "warn"],
 const PLATFORMS = { pc: "PC", quest: "Quest", both: "PC + Quest" };
 const S = { shop: null, tab: "shop", cat: "All", form: {}, sent: null };
 const money = (n) => (S.shop?.currency ?? "$") + (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const hasPrice = (a) => a.price != null && a.price !== "";
 const avatars = () => (S.shop?.avatars || []).filter((a) => a && a.name);
 
 function renderHeader() {
@@ -60,7 +61,7 @@ function card(a) {
       el("span", { class: "state pill " + tone }, label)),
     el("div", { class: "body" },
       el("h3", {}, a.name),
-      el("div", { class: "price" }, money(a.price), a.priceNote ? el("small", {}, " " + a.priceNote) : null),
+      el("div", { class: "price" }, hasPrice(a) ? money(a.price) : "Ask for price", a.priceNote ? el("small", {}, " " + a.priceNote) : null),
       el("div", { class: "pills" }, el("span", { class: "pill accent" }, a.category || "Other"), a.platform ? el("span", { class: "pill info" }, PLATFORMS[a.platform] || a.platform) : null,
         (a.features || []).map((f) => el("span", { class: "pill" }, f))),
       a.description ? el("p", { class: "desc" }, a.description) : null,
@@ -156,7 +157,7 @@ function submit(e) {
   if (missing.length) { const er = $("rq-err"); er.textContent = "Please add " + missing.join(", ") + "."; er.hidden = false; return; }
   const a = avatars().find((x) => x.name === r.item);
   S.sent = [`Avatar purchase request — ${S.shop.name}`, `Name: ${r.name}`, `Contact: ${r.contact}`,
-    `Avatar: ${r.item}${a ? " (" + money(a.price) + ")" : ""}`, `Platform: ${PLATFORMS[r.platform]}`, r.details ? `\nMessage:\n${r.details}` : null].filter(Boolean).join("\n");
+    `Avatar: ${r.item}${a && hasPrice(a) ? " (" + money(a.price) + ")" : ""}`, `Platform: ${PLATFORMS[r.platform]}`, r.details ? `\nMessage:\n${r.details}` : null].filter(Boolean).join("\n");
   render();
 }
 

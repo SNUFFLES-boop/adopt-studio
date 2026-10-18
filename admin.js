@@ -162,7 +162,7 @@ function viewAvatars() {
     return el("article", { class: "card" },
       el("div", { class: "thumb" }, a.image ? el("img", { src: a.image, alt: "", loading: "lazy" }) : el("span", { class: "ph" }, (a.name || "?").slice(0, 1).toUpperCase()),
         el("span", { class: "state pill " + tone }, STATES[a.state] || "Available")),
-      el("div", { class: "body" }, el("h3", {}, a.name), el("div", { class: "price" }, money(a.price)),
+      el("div", { class: "body" }, el("h3", {}, a.name), el("div", { class: "price" }, a.price != null && a.price !== "" ? money(a.price) : "No price yet"),
         el("div", { class: "pills" }, el("span", { class: "pill accent" }, a.category || "Other"), a.platform ? el("span", { class: "pill info" }, PLATFORMS[a.platform]) : null, a.model ? el("span", { class: "pill" }, "3D") : null),
         el("div", { class: "foot" },
           el("button", { class: "btn small", type: "button", onclick: () => editAvatar(i) }, "Edit"),
@@ -230,7 +230,7 @@ $("sheet-form").addEventListener("submit", async (e) => {
   for (const fd of e.target._fields) {
     if (fd.type === "image" || fd.type === "model") continue;
     const n = $("sf-" + fd.key);
-    if (fd.type === "number") out[fd.key] = n.value === "" ? 0 : Number(n.value);
+    if (fd.type === "number") out[fd.key] = n.value === "" ? "" : Number(n.value);
     else if (fd.type === "list") out[fd.key] = n.value.split(",").map((s) => s.trim()).filter(Boolean);
     else out[fd.key] = n.value.trim();
     if (fd.required && !out[fd.key]) { const er = $("sf-err"); er.textContent = fd.label + " is required."; er.hidden = false; return; }
@@ -259,7 +259,7 @@ function editAvatar(i) {
       { key: "image", label: "Picture", type: "image" },
       { key: "model", label: "3D model (optional)", type: "model", hint: "A .glb preview so buyers can tap View in 3D. Anyone can download it, so use a lighter preview, not your full avatar." },
       { key: "category", label: "Category", hint: cats.length ? "Existing: " + cats.join(", ") : "e.g. Anime, Furry, Feline, Robot", placeholder: "Anime" },
-      { key: "price", label: "Price (" + (S.shop.currency || "$") + ")", type: "number" },
+      { key: "price", label: "Price (" + (S.shop.currency || "$") + ")", type: "number", hint: "Leave empty to show 'Ask for price'" },
       { key: "priceNote", label: "Price note", hint: "Optional, e.g. 'one copy only' or 'incl. Quest version'" },
       { key: "state", label: "Availability", type: "select", default: "available", options: Object.entries(STATES) },
       { key: "platform", label: "Platform", type: "select", default: "both", options: Object.entries(PLATFORMS) },
