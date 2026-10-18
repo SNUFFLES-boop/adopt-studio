@@ -122,13 +122,16 @@ function contactLine() {
 function requestForm() {
   const s = S.shop;
   const options = avatars().filter((a) => a.state !== "sold").map((a) => a.name);
-  if (S.sent) return el("div", { class: "panel" }, el("div", { class: "okmsg" }, "Your request is ready to send."),
-    el("p", { class: "note" }, "Copy it and send it to me " + contactLine() + "."),
+  if (S.sent) return el("div", { class: "panel" },
+    S.delivered ? el("div", { class: "okmsg" }, "Request sent! I'll reply to you at " + S.form.contact + ".")
+      : el("div", { class: S.sendError ? "banner" : "okmsg" }, S.sendError || "Your request is ready to send."),
+    S.delivered ? el("p", { class: "note" }, "A copy of what you sent is below.")
+      : el("p", { class: "note" }, "Copy it and send it to me" + (contactLine() ? " " + contactLine() : "") + "."),
     el("pre", { class: "msg" }, S.sent),
     el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
       el("button", { class: "btn primary", type: "button", onclick: () => copyText(S.sent, "Request copied") }, "Copy request"),
       s.discord ? el("button", { class: "btn", type: "button", onclick: () => copyText(s.discord, "Discord name copied") }, "Copy Discord name") : null,
-      el("button", { class: "btn", type: "button", onclick: () => { S.sent = null; S.form = {}; render(); } }, "Start another")));
+      el("button", { class: "btn", type: "button", onclick: () => { S.sent = null; S.delivered = false; S.sendError = null; S.form = {}; render(); } }, "Start another")));
   if (!options.length) return el("div", { class: "panel" }, el("h3", { style: "font:700 16px var(--font-display);margin:0" }, "Nothing for sale right now"),
     el("p", { class: "note" }, "All avatars are sold out. Check back soon."));
   const f = (id, label, input, hint) => el("label", { class: "f", for: id }, label, hint ? el("span", { class: "hint" }, hint) : null, input);
@@ -143,14 +146,52 @@ function requestForm() {
       f("rq-platform", "Platform", el("select", { id: "rq-platform" }, Object.entries(PLATFORMS).map(([v, l]) => el("option", { value: v, selected: (S.form.platform || "both") === v }, l))))),
     f("rq-details", "Message", el("textarea", { id: "rq-details", placeholder: "Questions, how you'd like to pay, anything else…" }, S.form.details || "")),
     el("span", { class: "err", id: "rq-err", hidden: true }),
-    el("div", {}, el("button", { class: "btn primary", type: "submit" }, "Create request")),
-    el("p", { class: "note" }, "You'll get a ready-made message to copy and send to me" + (contactLine() ? " " + contactLine() : "") + "."));
+    el("div", {}, el("button", { class: "btn primary", type: "submit", id: "rq-submit" }, webhook() ? "Send request" : "Create request")),
+    el("p", { class: "note" }, webhook() ? "Your request goes straight to me on Discord."
+      : "You'll get a ready-made message to copy and send to me" + (contactLine() ? " " + contactLine() : "") + "."));
+}
+function webhook() {
+  const u = S.shop?.webhook;
+  return typeof u === "string" && /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(u) ? u : null;
+}
+// Light spam limit per visitor: one request a minute, five a day.
+const SENT_KEY = "adopt-studio.sent";
+function sendAllowed() {
+  let log = [];
+  try { log = JSON.parse(localStorage.getItem(SENT_KEY) || "[]").filter((t) => Date.now() - t < 864e5); } catch {}
+  if (log.length && Date.now() - log[log.length - 1] < 6e4) return "Please wait a minute before sending another request.";
+  if (log.length >= 5) return "You've sent several requests today. Copy this one and message me directly instead.";
+  return null;
+}
+function noteSent() {
+  try { const log = JSON.parse(localStorage.getItem(SENT_KEY) || "[]").filter((t) => Date.now() - t < 864e5); log.push(Date.now()); localStorage.setItem(SENT_KEY, JSON.stringify(log)); } catch {}
+}
+async function deliver(r, a) {
+  const clip = (s, n) => String(s || "").slice(0, n);
+  const fields = [
+    { name: "Avatar", value: clip(r.item + (a && hasPrice(a) ? " — " + money(a.price) : ""), 1000), inline: true },
+    { name: "Platform", value: PLATFORMS[r.platform] || r.platform, inline: true },
+    { name: "Buyer", value: clip(r.name, 200), inline: true },
+    { name: "Contact", value: clip(r.contact, 200), inline: true },
+  ];
+  if (r.details) fields.push({ name: "Message", value: clip(r.details, 1000) });
+  const res = await fetch(webhook(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: clip(S.shop.name || "Shop", 80),
+      content: "New avatar purchase request",
+      allowed_mentions: { parse: [] },
+      embeds: [{ title: clip("Purchase request: " + r.item, 250), color: 0xc2307a, fields, timestamp: new Date().toISOString() }],
+    }),
+  });
+  if (!res.ok) throw new Error(String(res.status));
 }
 function readForm() {
   const v = (id) => ($(id)?.value || "").trim();
   return { name: v("rq-name"), contact: v("rq-contact"), item: v("rq-item"), platform: v("rq-platform") || "both", details: v("rq-details") };
 }
-function submit(e) {
+async function submit(e) {
   e.preventDefault();
   const r = readForm(); S.form = r;
   const missing = [!r.name && "your name", !r.contact && "a Discord name or email", !r.item && "which avatar you want"].filter(Boolean);
@@ -158,6 +199,16 @@ function submit(e) {
   const a = avatars().find((x) => x.name === r.item);
   S.sent = [`Avatar purchase request — ${S.shop.name}`, `Name: ${r.name}`, `Contact: ${r.contact}`,
     `Avatar: ${r.item}${a && hasPrice(a) ? " (" + money(a.price) + ")" : ""}`, `Platform: ${PLATFORMS[r.platform]}`, r.details ? `\nMessage:\n${r.details}` : null].filter(Boolean).join("\n");
+  S.delivered = false; S.sendError = null;
+  if (webhook()) {
+    const blocked = sendAllowed();
+    if (blocked) S.sendError = blocked;
+    else {
+      const btn = $("rq-submit"); if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+      try { await deliver(r, a); noteSent(); S.delivered = true; }
+      catch { S.sendError = "Couldn't send it automatically. Copy your request and message me instead."; }
+    }
+  }
   render();
 }
 
