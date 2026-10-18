@@ -57,10 +57,11 @@ type Settings struct {
 	PagePort    int    `json:"pagePort"`
 	PhoneAccess bool   `json:"phoneAccess"`
 	PIN         string `json:"pin"`
+	AutoUpdate  bool   `json:"autoUpdateCheck"` // check GitHub for a newer version
 }
 
 func defaultSettings() Settings {
-	return Settings{VRChatHost: "127.0.0.1", SendPort: 9000, ReceivePort: 9001, Confirm: true, PagePort: 9010}
+	return Settings{VRChatHost: "127.0.0.1", SendPort: 9000, ReceivePort: 9001, Confirm: true, PagePort: 9010, AutoUpdate: true}
 }
 
 func newPIN() string {
@@ -82,6 +83,7 @@ type app struct {
 	webErr   string
 	allowed  map[string]bool
 	lanURLs  []string
+	upd      *updater
 }
 
 func (a *app) path(name string) string { return filepath.Join(a.dir, name) }
@@ -485,7 +487,7 @@ func (a *app) state() map[string]any {
 	st, lan, webErr := a.settings, append([]string(nil), a.lanURLs...), a.webErr
 	a.mu.Unlock()
 	return map[string]any{"avatars": a.list(), "current": cur, "listening": listening, "listenError": listenErr,
-		"settings": st, "lan": lan, "webError": webErr}
+		"settings": st, "lan": lan, "webError": webErr, "update": a.upd.status()}
 }
 
 func (a *app) routes() http.Handler {
@@ -694,7 +696,7 @@ func (a *app) routes() http.Handler {
 		a.mu.Lock()
 		old := a.settings
 		a.settings.VRChatHost, a.settings.SendPort, a.settings.ReceivePort, a.settings.Confirm = host, in.SendPort, in.ReceivePort, in.Confirm
-		a.settings.PagePort, a.settings.PhoneAccess = in.PagePort, in.PhoneAccess
+		a.settings.PagePort, a.settings.PhoneAccess, a.settings.AutoUpdate = in.PagePort, in.PhoneAccess, in.AutoUpdate
 		if in.NewPIN {
 			a.settings.PIN = newPIN()
 		}
@@ -713,6 +715,52 @@ func (a *app) routes() http.Handler {
 		if restart {
 			go func() { time.Sleep(300 * time.Millisecond); a.restartWeb() }()
 		}
+	})
+	localOnly := func(w http.ResponseWriter, r *http.Request) bool {
+		if !a.guard(w, r) {
+			return false
+		}
+		if r.Method != http.MethodPost || !isLocalHost(hostOnly(r.Host)) {
+			http.Error(w, "updates can only be done on the PC", http.StatusForbidden)
+			return false
+		}
+		return true
+	}
+	mux.HandleFunc("/api/update/check", func(w http.ResponseWriter, r *http.Request) {
+		if localOnly(w, r) {
+			a.upd.check()
+			writeJSON(w, a.upd.status())
+		}
+	})
+	mux.HandleFunc("/api/update/install", func(w http.ResponseWriter, r *http.Request) {
+		if !localOnly(w, r) {
+			return
+		}
+		if err := a.upd.install(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			fmt.Println("\nUpdated. Restarting Avatar Switcher…")
+			a.mu.Lock()
+			srv := a.web
+			a.mu.Unlock()
+			if srv != nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				_ = srv.Shutdown(ctx)
+				cancel()
+			}
+			a.upd.mu.Lock()
+			exePath := a.upd.exePath
+			a.upd.mu.Unlock()
+			if err := restart(exePath); err != nil {
+				fmt.Println("Couldn't restart by itself. Close this window and open AvatarSwitcher.exe again.")
+				return
+			}
+			os.Exit(0)
+		}()
 	})
 	return mux
 }
@@ -811,10 +859,15 @@ func openBrowser(url string) {
 func main() {
 	lan := flag.Bool("lan", false, "turn on phone access")
 	noBrowser := flag.Bool("no-browser", false, "don't open the browser on start")
+	afterUpdate := flag.Bool("after-update", false, "started by the updater")
 	flag.Parse()
+	cleanupOld()
+	if *afterUpdate {
+		fmt.Println("Updated to version", version)
+	}
 
 	exe, _ := os.Executable()
-	a := &app{dir: filepath.Dir(exe), vrc: &vrchat{}}
+	a := &app{dir: filepath.Dir(exe), vrc: &vrchat{}, upd: &updater{}}
 	a.load()
 	if *lan {
 		a.settings.PhoneAccess = true
@@ -823,11 +876,21 @@ func main() {
 	_ = a.saveSettingsLocked()
 	a.mu.Unlock()
 	a.vrc.configure(a.settings.VRChatHost, a.settings.SendPort, a.settings.ReceivePort, a.settings.Confirm)
-	if err := a.startWeb(); err != nil {
+	err := a.startWeb()
+	for i := 0; err != nil && *afterUpdate && i < 20; i++ { // the old version may still be closing
+		time.Sleep(500 * time.Millisecond)
+		err = a.startWeb()
+	}
+	if err != nil {
 		fmt.Printf("Couldn't start on port %d: %v\nIs Avatar Switcher already running?\n\nPress Enter to close.", a.settings.PagePort, err)
 		fmt.Scanln()
 		os.Exit(1)
 	}
+	go a.upd.loop(func() bool {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		return a.settings.AutoUpdate
+	})
 	if !*noBrowser {
 		go openBrowser(fmt.Sprintf("http://localhost:%d", a.settings.PagePort))
 	}

@@ -45,12 +45,15 @@
     </ol>
     <p>Your phone and PC must be on the same Wi-Fi.</p>
   </div>
+  <p style="margin:0">Version <span id="ver"></span> · <a href="#" id="upd" style="color:var(--accent)">Check for updates</a></p>
 <script>
 const q = new URLSearchParams(location.search);
 if (q.get("error")) { const e = document.getElementById("err"); e.textContent = q.get("error"); e.hidden = false; }
 const last = q.get("last");
 if (last) { try { const u = new URL(last); document.getElementById("ip").value = u.hostname; document.getElementById("port").value = u.port || "9010"; } catch {} }
 const btn = document.querySelector("#f button");
+try { document.getElementById("ver").textContent = window.AvatarSwitcherApp.version(); } catch {}
+document.getElementById("upd").addEventListener("click", (e) => { e.preventDefault(); window.AvatarSwitcherApp.checkForUpdates(); });
 function showConnectError(msg) {
   const err = document.getElementById("err"); err.textContent = msg; err.hidden = false;
   btn.disabled = false; btn.textContent = "Connect";

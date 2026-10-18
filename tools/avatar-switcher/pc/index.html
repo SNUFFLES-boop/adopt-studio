@@ -63,6 +63,8 @@
   .dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(460px, 100%); display: flex; flex-direction: column; gap: 10px; }
   .dialog h2 { margin: 0; font-size: 18px; }
   .dialog ol { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+  .update { background: var(--ok-soft); border: 1px solid var(--ok); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .update b { color: var(--fg); }
   .phone { background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
   .phone-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   .phone-title { font-weight: 700; font-size: 16px; }
@@ -78,7 +80,7 @@
       <h1>Avatar Switcher</h1>
       <p class="sub">Switch your VRChat avatar from here. VRChat needs OSC on: Action Menu → Options → OSC → Enabled.</p>
     </div>
-    <a class="btn small" id="change-pc" href="avatarswitcher://connect" hidden>Change PC</a>
+    <div class="bar" id="app-buttons" hidden><button class="btn small" type="button" id="app-update">App updates</button><a class="btn small" href="avatarswitcher://connect">Change PC</a></div>
   </div>
   <section class="phone" id="phone-card" hidden>
     <div class="phone-head"><span class="phone-title">📱 Connect your phone</span>
@@ -90,6 +92,10 @@
     </div>
     <p class="note" id="phone-hint" hidden>If your phone can't connect, Windows Firewall may be blocking it: when Windows asks, allow Avatar Switcher on <b>Private networks</b>.</p>
   </section>
+  <div class="update" id="update-banner" hidden>
+    <div><b id="update-title"></b><p class="note" id="update-sub">Your avatars and settings stay as they are.</p></div>
+    <div class="bar"><a class="btn small" id="update-notes" target="_blank" rel="noopener">What's new</a><button class="btn primary" type="button" id="update-go">Update now</button></div>
+  </div>
   <div id="status" class="status" hidden aria-live="polite"></div>
   <div id="warn" class="status warn" hidden></div>
   <div class="bar">
@@ -115,6 +121,7 @@
         <label for="s-page">Page port <span class="hint">This page's port (default 9010)</span><input id="s-page" type="number" min="1024" max="65535"></label>
         <label class="check" for="s-confirm"><input id="s-confirm" type="checkbox"> Confirm switches by listening for VRChat's reply</label>
         <label class="check" for="s-phone"><input id="s-phone" type="checkbox"> Phone access (same Wi-Fi, needs the PIN)</label>
+        <label class="check" for="s-auto"><input id="s-auto" type="checkbox"> Check for updates automatically</label>
       </div>
       <div id="phone-info" class="panel" style="margin-top:12px" hidden>
         <p class="note">Phone PIN</p>
@@ -122,6 +129,7 @@
         <p class="note" id="lan"></p>
       </div>
       <p class="note" style="margin-top:10px">If you changed VRChat's OSC ports with a launch option like <code>--osc=9000:127.0.0.1:9001</code>, use the same numbers here.</p>
+      <div class="bar" style="margin-top:12px"><span class="note" id="version-line"></span><button class="btn small" type="button" id="check-update">Check for updates</button></div>
       <div class="bar" style="margin-top:10px"><button class="btn primary" type="submit">Save settings</button><button class="btn" type="button" id="s-reset">Use defaults</button></div>
     </form>
   </details>
@@ -174,7 +182,7 @@ async function api(path, body, raw) {
 }
 async function refresh() {
   try { state = await api("/api/state"); render(); }
-  catch (e) { if (e.message !== "PIN needed") show("Lost connection to Avatar Switcher. Is it still running on your PC?", "bad"); }
+  catch (e) { if (e.message !== "PIN needed" && !updatingTo) show("Lost connection to Avatar Switcher. Is it still running on your PC?", "bad"); }
 }
 
 function render() {
@@ -252,14 +260,49 @@ function renderSettings() {
   const s = state.settings || {};
   if (!settingsLoaded) {
     $("s-host").value = s.vrchatHost; $("s-send").value = s.sendPort; $("s-recv").value = s.receivePort; $("s-page").value = s.pagePort;
-    $("s-confirm").checked = !!s.confirm; $("s-phone").checked = !!s.phoneAccess;
+    $("s-confirm").checked = !!s.confirm; $("s-phone").checked = !!s.phoneAccess; $("s-auto").checked = s.autoUpdateCheck !== false;
     settingsLoaded = true;
   }
   $("phone-info").hidden = !s.phoneAccess;
   $("pin").textContent = s.pin || "";
   $("lan").textContent = state.lan?.length ? "On your phone, open " + state.lan.join("  or  ") + " (or use the Android app)." : "No Wi-Fi network found on this PC.";
   renderPhone();
+  renderUpdate();
 }
+let updatingTo = null;
+function renderUpdate() {
+  const u = state.update || {};
+  $("version-line").textContent = "Version " + (u.version || "?") + (u.checkError ? " · " + u.checkError : u.available ? "" : u.checkedAt ? " · up to date" : "");
+  const av = u.available;
+  $("update-banner").hidden = !av && !updatingTo;
+  if (av && !updatingTo) {
+    $("update-title").textContent = "Avatar Switcher " + av.version + " is available (you have " + u.version + ")";
+    $("update-notes").href = av.url; $("update-go").disabled = false; $("update-go").textContent = "Update now";
+  }
+  if (updatingTo && u.version === updatingTo) {
+    updatingTo = null; $("update-banner").hidden = true; show("Updated to version " + u.version + " ✓", "ok");
+  }
+}
+$("check-update").addEventListener("click", async () => {
+  $("check-update").disabled = true; $("check-update").textContent = "Checking…";
+  try { state.update = await api("/api/update/check", {}); renderUpdate(); if (!state.update.available && !state.update.checkError) show("You have the newest version.", "ok"); }
+  catch { show("Couldn't check for updates. Try again.", "bad"); }
+  $("check-update").disabled = false; $("check-update").textContent = "Check for updates";
+});
+$("update-go").addEventListener("click", async () => {
+  const target = state.update?.available?.version; if (!target) return;
+  $("update-go").disabled = true; $("update-go").textContent = "Downloading…";
+  try {
+    await api("/api/update/install", {});
+    updatingTo = target;
+    $("update-title").textContent = "Installing " + target + "…"; $("update-sub").textContent = "Avatar Switcher is restarting. This page comes back by itself in a few seconds.";
+    $("update-go").textContent = "Restarting…";
+    const wait = setInterval(async () => { try { const st = await api("/api/state"); if (st.update?.version === target) { clearInterval(wait); state = st; render(); } } catch {} }, 1500);
+  } catch (err) {
+    $("update-go").disabled = false; $("update-go").textContent = "Try again";
+    show("Couldn't update: " + err.message + ". You can also download it from the What's new page.", "bad");
+  }
+});
 function renderPhone() {
   const s = state.settings || {};
   $("phone-card").hidden = false;
@@ -274,7 +317,7 @@ function renderPhone() {
 $("phone-toggle").addEventListener("click", () => { $("s-phone").checked = !state.settings?.phoneAccess; saveSettings(); });
 async function saveSettings(extra = {}) {
   const body = { vrchatHost: $("s-host").value.trim(), sendPort: +$("s-send").value, receivePort: +$("s-recv").value, pagePort: +$("s-page").value,
-    confirm: $("s-confirm").checked, phoneAccess: $("s-phone").checked, ...extra };
+    confirm: $("s-confirm").checked, phoneAccess: $("s-phone").checked, autoUpdateCheck: $("s-auto").checked, ...extra };
   try {
     const r = await api("/api/settings", body);
     settingsLoaded = false;
@@ -308,7 +351,10 @@ $("add-form").addEventListener("submit", async (e) => {
 });
 $("q").addEventListener("input", render);
 if (!onPC) $("import-btn").hidden = true;
-if (navigator.userAgent.includes("AvatarSwitcherApp")) $("change-pc").hidden = false;
+if (navigator.userAgent.includes("AvatarSwitcherApp")) {
+  $("app-buttons").hidden = false;
+  $("app-update").addEventListener("click", () => { try { window.AvatarSwitcherApp.checkForUpdates(); } catch { show("Update the app from the Releases page on GitHub.", "warn"); } });
+}
 refresh();
 setInterval(() => { if (!busy && document.visibilityState === "visible" && $("pic-ov").hidden) refresh(); }, 5000);
 </script>

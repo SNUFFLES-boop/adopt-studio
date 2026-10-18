@@ -10,28 +10,27 @@ android {
         applicationId 'com.deltro.avatarswitcher'
         minSdk 24
         targetSdk 34
-        versionCode 4
-        versionName '1.1.2'
+        // The build sets these from the release number; local builds use the fallbacks.
+        versionCode (System.getenv('APP_VERSION_CODE') ?: '4').toInteger()
+        versionName System.getenv('APP_VERSION') ?: '1.1.2'
     }
 
     signingConfigs {
-        // Release builds are signed with a key from the build's secrets when present,
-        // otherwise with the debug key so the APK still installs.
+        // Every build is signed with the same key, so Android accepts each new version as an
+        // update of the installed app. A key in SIGNING_* secrets takes priority when set.
         release {
             def ks = System.getenv('SIGNING_KEYSTORE')
-            if (ks) {
-                storeFile file(ks)
-                storePassword System.getenv('SIGNING_STORE_PASSWORD')
-                keyAlias System.getenv('SIGNING_KEY_ALIAS')
-                keyPassword System.getenv('SIGNING_KEY_PASSWORD')
-            }
+            storeFile ks ? file(ks) : rootProject.file('release.keystore')
+            storePassword System.getenv('SIGNING_STORE_PASSWORD') ?: 'avatarswitcher'
+            keyAlias System.getenv('SIGNING_KEY_ALIAS') ?: 'avatarswitcher'
+            keyPassword System.getenv('SIGNING_KEY_PASSWORD') ?: 'avatarswitcher'
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig System.getenv('SIGNING_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 

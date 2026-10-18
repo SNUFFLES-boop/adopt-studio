@@ -32,11 +32,13 @@ public class MainActivity extends Activity {
     private WebView web;
     private SharedPreferences prefs;
     private ValueCallback<Uri[]> fileCallback;
+    private Updater updater;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences("switcher", MODE_PRIVATE);
+        updater = new Updater(this, prefs);
         web = new WebView(this);
         setContentView(web);
 
@@ -91,6 +93,13 @@ public class MainActivity extends Activity {
         String saved = savedUrl();
         if (saved != null) web.loadUrl(saved);
         else showConnect(null);
+        updater.autoCheck();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updater.onResume();
     }
 
     private String savedUrl() {
@@ -129,6 +138,16 @@ public class MainActivity extends Activity {
 
     /** Called from connect.html. */
     private class Bridge {
+        @JavascriptInterface
+        public void checkForUpdates() {
+            updater.check(true);
+        }
+
+        @JavascriptInterface
+        public String version() {
+            return updater.installedVersion();
+        }
+
         /** Checks the PC answers before opening it, and reports back to connect.html either way. */
         @JavascriptInterface
         public void connect(String url) {

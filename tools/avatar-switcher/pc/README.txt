@@ -1,4 +1,4 @@
-AVATAR SWITCHER 1.1
+AVATAR SWITCHER
 Switch your VRChat avatar from a list, using VRChat's built-in OSC.
 Works with VRChat on PC (desktop or PCVR). It only talks to VRChat and to picture links you paste.
 
@@ -29,6 +29,11 @@ PHONE
 Install the Android app (AvatarSwitcher.apk). On the PC, click "Turn on phone access" in the
 "Connect your phone" box at the top, then type the address and PIN it shows into the app. Or open that address in your phone's browser.
 If Windows asks about the firewall, allow Private networks only.
+
+UPDATES
+Avatar Switcher checks for a new version every few hours (turn this off in Settings).
+When one is out, a green box appears at the top: click Update now and it updates and
+restarts by itself. The phone app asks to update on its own too.
 
 GOOD TO KNOW
 - VRChat only switches to avatars you're allowed to wear (your own uploads, and public

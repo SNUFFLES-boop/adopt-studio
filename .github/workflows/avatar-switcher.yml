@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # One version for both apps; the in-app updaters compare against it.
+      APP_VERSION: 1.2.${{ github.run_number }}
+      APP_VERSION_CODE: ${{ github.run_number }}0
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +29,7 @@ jobs:
         working-directory: tools/avatar-switcher/pc
         run: |
           go vet ./...
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o ../out/AvatarSwitcher.exe .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$APP_VERSION" -o ../out/AvatarSwitcher.exe .
           cp README.txt "Start with phone access.bat" ../out/
           cd ../out && zip -q AvatarSwitcher-Windows.zip AvatarSwitcher.exe README.txt "Start with phone access.bat"
 
@@ -54,13 +58,14 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: avatar-switcher-v1.1.${{ github.run_number }}
-          name: Avatar Switcher 1.1 (build ${{ github.run_number }})
+          tag_name: avatar-switcher-v${{ env.APP_VERSION }}
+          name: Avatar Switcher ${{ env.APP_VERSION }}
           make_latest: true
           body: |
             **Windows:** download AvatarSwitcher-Windows.zip, unzip it and run AvatarSwitcher.exe.
             **Android:** download AvatarSwitcher.apk on your phone and open it to install (allow installing from your browser if asked).
-            The phone app connects to Avatar Switcher on your PC; turn on Phone access in its Settings first.
+            The phone app connects to Avatar Switcher on your PC; click Turn on phone access on the PC first.
+            Already installed? Both apps update themselves: click Update now on the PC, or tap Update in the phone app.
           files: |
             tools/avatar-switcher/out/AvatarSwitcher-Windows.zip
             tools/avatar-switcher/out/AvatarSwitcher.apk
