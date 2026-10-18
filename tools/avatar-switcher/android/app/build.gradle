@@ -2,6 +2,10 @@ plugins {
     id 'com.android.application'
 }
 
+// The release build sets these from its run number; local builds use the fallbacks.
+def appVersion = System.getenv('APP_VERSION') ?: '1.1.2'
+def appVersionCode = (System.getenv('APP_VERSION_CODE') ?: '4').toInteger()
+
 android {
     namespace 'com.deltro.avatarswitcher'
     compileSdk 34
@@ -10,9 +14,8 @@ android {
         applicationId 'com.deltro.avatarswitcher'
         minSdk 24
         targetSdk 34
-        // The build sets these from the release number; local builds use the fallbacks.
-        versionCode (System.getenv('APP_VERSION_CODE') ?: '4').toInteger()
-        versionName System.getenv('APP_VERSION') ?: '1.1.2'
+        versionCode appVersionCode
+        versionName appVersion
     }
 
     signingConfigs {
@@ -20,10 +23,10 @@ android {
         // update of the installed app. A key in SIGNING_* secrets takes priority when set.
         release {
             def ks = System.getenv('SIGNING_KEYSTORE')
-            storeFile ks ? file(ks) : rootProject.file('release.keystore')
-            storePassword System.getenv('SIGNING_STORE_PASSWORD') ?: 'avatarswitcher'
-            keyAlias System.getenv('SIGNING_KEY_ALIAS') ?: 'avatarswitcher'
-            keyPassword System.getenv('SIGNING_KEY_PASSWORD') ?: 'avatarswitcher'
+            storeFile = ks ? file(ks) : rootProject.file('release.keystore')
+            storePassword = System.getenv('SIGNING_STORE_PASSWORD') ?: 'avatarswitcher'
+            keyAlias = System.getenv('SIGNING_KEY_ALIAS') ?: 'avatarswitcher'
+            keyPassword = System.getenv('SIGNING_KEY_PASSWORD') ?: 'avatarswitcher'
         }
     }
 
