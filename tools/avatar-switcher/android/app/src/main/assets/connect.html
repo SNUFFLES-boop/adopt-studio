@@ -14,6 +14,7 @@
   form { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
   label { font-weight: 600; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
   input { width: 100%; min-width: 0; font: 18px ui-monospace, monospace; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+  button:disabled { opacity: .7; }
   button { font: inherit; font-weight: 700; padding: 13px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); }
   .err { background: var(--bad-soft); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 14px; }
   .row { display: flex; gap: 10px; }
@@ -29,7 +30,7 @@
   <div class="err" id="err" hidden></div>
   <form id="f">
     <div class="row">
-      <label for="ip">PC address<input id="ip" inputmode="decimal" placeholder="192.168.1.20" autocomplete="off" required></label>
+      <label for="ip">PC address<input id="ip" inputmode="decimal" placeholder="192.168.1.20" autocomplete="off"></label>
       <label for="port">Port<input id="port" inputmode="numeric" value="9010" autocomplete="off"></label>
     </div>
     <button type="submit">Connect</button>
@@ -49,14 +50,21 @@ const q = new URLSearchParams(location.search);
 if (q.get("error")) { const e = document.getElementById("err"); e.textContent = q.get("error"); e.hidden = false; }
 const last = q.get("last");
 if (last) { try { const u = new URL(last); document.getElementById("ip").value = u.hostname; document.getElementById("port").value = u.port || "9010"; } catch {} }
+const btn = document.querySelector("#f button");
+function showConnectError(msg) {
+  const err = document.getElementById("err"); err.textContent = msg; err.hidden = false;
+  btn.disabled = false; btn.textContent = "Connect";
+  err.scrollIntoView({ block: "nearest" });
+}
 document.getElementById("f").addEventListener("submit", (e) => {
   e.preventDefault();
   let ip = document.getElementById("ip").value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   let port = document.getElementById("port").value.trim() || "9010";
   if (ip.includes(":")) { [ip, port] = ip.split(":"); }
-  if (!/^[\w.-]+$/.test(ip) || !/^\d{2,5}$/.test(port)) {
-    const err = document.getElementById("err"); err.textContent = "That doesn't look like an address. It looks like 192.168.1.20."; err.hidden = false; return;
-  }
+  if (!ip) { showConnectError("Type your PC's address first. Your PC shows it in the Connect your phone box."); return; }
+  if (!/^[\w.-]+$/.test(ip) || !/^\d{2,5}$/.test(port)) { showConnectError("That doesn't look like an address. It looks like 192.168.1.20."); return; }
+  document.getElementById("err").hidden = true;
+  btn.disabled = true; btn.textContent = "Connecting to " + ip + "…";
   window.AvatarSwitcherApp.connect("http://" + ip + ":" + port + "/");
 });
 </script>
