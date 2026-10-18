@@ -123,7 +123,7 @@ function requestForm() {
   const s = S.shop;
   const options = avatars().filter((a) => a.state !== "sold").map((a) => a.name);
   if (S.sent) return el("div", { class: "panel" },
-    S.delivered ? el("div", { class: "okmsg" }, el("b", {}, `Sent to ${seller()}! ✓`), el("br"), `${seller()} will reply to you at ${S.form.contact}.`)
+    S.delivered ? el("div", { class: "okmsg" }, el("b", {}, `Sent to ${seller()}! ✓`), el("br"), replyLine(S.form.contact))
       : el("div", { class: S.sendError ? "banner" : "okmsg" }, S.sendError || "Your request is ready to send."),
     S.delivered ? el("p", { class: "note" }, "A copy of what you sent is below.")
       : el("p", { class: "note" }, "Copy it and send it to me" + (contactLine() ? " " + contactLine() : "") + "."),
@@ -149,6 +149,12 @@ function requestForm() {
     el("div", {}, el("button", { class: "btn primary", type: "submit", id: "rq-submit" }, webhook() ? "Send request" : "Create request")),
     el("p", { class: "note" }, webhook() ? `Your request goes straight to ${seller()} on Discord.`
       : "You'll get a ready-made message to copy and send to me" + (contactLine() ? " " + contactLine() : "") + "."));
+}
+function replyLine(contact) {
+  const c = String(contact || "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)
+    ? `${seller()} will email you at ${c}.`
+    : `${seller()} will message you on Discord (${c}). Keep your DMs open so the message can reach you.`;
 }
 const seller = () => (S.shop?.seller || "").trim() || S.shop?.name || "the seller";
 function webhook() {
